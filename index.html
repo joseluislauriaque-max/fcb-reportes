@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="FCB Reportes"/>
+<meta name="theme-color" content="#E8520A"/>
+<title>Reportes Diarios FCB</title>
+<!-- v3.0 - codigos especiales para maquina General -->
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icons/icon-192.png"/>
+<link rel="icon" type="image/png" href="icons/icon-192.png"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overscroll-behavior:none}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f2f2f7;color:#1c1c1e;max-width:430px;margin:0 auto;position:relative}
+.app{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+.topbar{background:#fff;border-bottom:0.5px solid rgba(0,0,0,0.12);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-left{display:flex;flex-direction:column}
+.topbar-title{font-size:16px;font-weight:600;color:#1c1c1e;letter-spacing:.2px}
+.topbar-sub{font-size:11px;color:#8e8e93;margin-top:1px}
+.role-badge{font-size:11px;padding:2px 9px;border-radius:20px;font-weight:500}
+.badge-admin{background:#ede9fe;color:#5b21b6}
+.badge-op{background:#e0f2fe;color:#0369a1}
+.nav{display:flex;background:#fff;border-bottom:0.5px solid rgba(0,0,0,0.12);position:sticky;top:57px;z-index:99}
+.nav-btn{flex:1;padding:9px 2px 8px;font-size:10px;color:#8e8e93;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;border-bottom:2px solid transparent;transition:color .2s}
+.nav-btn.active{color:#E8520A;border-bottom-color:#E8520A}
+.nav-btn i{font-size:19px}
+.nav-btn.locked{opacity:0.35;cursor:not-allowed}
+.page{display:none;padding-bottom:24px}
+.page.active{display:block}
+.page-inner{padding:12px;overflow-y:auto;max-height:calc(100vh - 110px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+.cover-img{width:100%;height:180px;object-fit:cover;display:block}
+.cover-banner{background:#E8520A;padding:12px 14px 10px}
+.cover-title{font-size:20px;font-weight:700;color:#fff;letter-spacing:.4px}
+.cover-subtitle{font-size:12px;color:rgba(255,255,255,0.88);margin-top:2px}
+.cover-date-bar{background:#fff;padding:9px 14px;border-bottom:0.5px solid rgba(0,0,0,0.08);display:flex;align-items:center;gap:7px;font-size:12px;color:#636366}
+.card{background:#fff;border-radius:14px;border:0.5px solid rgba(0,0,0,0.1);padding:14px;margin-bottom:10px}
+.card-title{font-size:13px;font-weight:600;color:#636366;margin-bottom:10px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.3px}
+label{font-size:13px;color:#636366;display:block;margin-bottom:4px}
+input,select,textarea{width:100%;font-size:15px;padding:10px 12px;border:0.5px solid rgba(0,0,0,0.15);border-radius:10px;background:#f2f2f7;color:#1c1c1e;margin-bottom:10px;-webkit-appearance:none;appearance:none}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#E8520A;background:#fff}
+textarea{resize:none;line-height:1.5}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.time-display{background:#e0f2fe;border-radius:10px;padding:10px 12px;font-size:14px;color:#0369a1;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;font-weight:500}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.stat-card{background:#fff;border-radius:12px;border:0.5px solid rgba(0,0,0,0.1);padding:12px}
+.stat-label{font-size:11px;color:#8e8e93;margin-bottom:4px}
+.stat-val{font-size:22px;font-weight:600;color:#1c1c1e}
+.stat-sub{font-size:11px;color:#8e8e93;margin-top:2px}
+.btn{width:100%;padding:13px;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:opacity .15s,transform .1s}
+.btn:active{transform:scale(0.97);opacity:.85}
+.btn-primary{background:#E8520A;color:#fff;margin-top:4px}
+.btn-secondary{background:#fff;color:#E8520A;border:1.5px solid #E8520A;margin-top:8px}
+.btn-danger{background:#fff;color:#dc2626;border:1.5px solid #fca5a5;margin-top:8px}
+.badge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500;white-space:nowrap}
+.badge-green{background:#dcfce7;color:#15803d}
+.badge-amber{background:#fef9c3;color:#92400e}
+.badge-red{background:#fee2e2;color:#991b1b}
+.cod-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:#fff3e0;color:#c2410c;margin-right:5px}
+.sector-tag{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:2px 7px;border-radius:20px;background:#dcfce7;color:#166534;margin-left:5px}
+.general-tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:20px;background:#fff3e0;color:#c2410c;margin-left:6px;font-weight:500}
+.record-item{border-bottom:0.5px solid rgba(0,0,0,0.08);padding:11px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.record-item:last-child{border-bottom:none}
+.record-main{font-size:14px;font-weight:600;color:#1c1c1e}
+.record-sub{font-size:12px;color:#636366;margin-top:3px;line-height:1.5}
+.photo-box{border:1.5px dashed rgba(0,0,0,0.2);border-radius:12px;padding:18px;text-align:center;cursor:pointer;margin-bottom:10px;background:#f9f9fb}
+.photo-preview-img{width:100%;border-radius:10px;margin-bottom:8px;display:none;max-height:180px;object-fit:cover}
+.sent-box{background:#f0fdf4;border-radius:12px;padding:14px;border:1px solid #bbf7d0;margin-top:10px;display:none}
+.sent-box.show{display:block}
+.delay-highlight{font-size:22px;font-weight:700;color:#15803d}
+.period-sel{display:flex;gap:6px;margin-bottom:12px}
+.period-btn{flex:1;padding:8px 4px;font-size:12px;font-weight:500;border:1px solid rgba(0,0,0,0.15);border-radius:10px;background:#fff;color:#636366;cursor:pointer}
+.period-btn.active{background:#E8520A;color:#fff;border-color:#E8520A}
+.rep-tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.rep-tab{padding:7px 11px;font-size:12px;font-weight:500;border:1px solid rgba(0,0,0,0.15);border-radius:10px;background:#fff;color:#636366;cursor:pointer}
+.rep-tab.active{background:#E8520A;color:#fff;border-color:#E8520A}
+.rep-section{display:none}
+.rep-section.active{display:block}
+.filter-row{display:flex;gap:6px;margin-bottom:8px}
+.filter-sel{flex:1;font-size:13px;padding:8px 10px;border:0.5px solid rgba(0,0,0,0.15);border-radius:10px;background:#f2f2f7;color:#1c1c1e;-webkit-appearance:none;appearance:none}
+.chart-wrap{position:relative;width:100%}
+.rank-wrap{margin-bottom:9px}
+.rank-lbl{font-size:12px;color:#1c1c1e;margin-bottom:3px;display:flex;justify-content:space-between}
+.rank-bg{background:#f2f2f7;border-radius:20px;height:9px;overflow:hidden}
+.rank-fill{height:9px;border-radius:20px}
+.top-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;padding:4px 12px;border-radius:20px;background:#fff3e0;color:#c2410c;margin-bottom:10px}
+.sector-group-lbl{font-size:12px;font-weight:600;color:#166534;background:#dcfce7;padding:5px 9px;border-radius:8px;margin:8px 0 4px;display:flex;justify-content:space-between;align-items:center}
+.admin-sec-title{font-size:11px;font-weight:600;color:#8e8e93;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px}
+.maq-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid rgba(0,0,0,0.08)}
+.maq-item:last-child{border-bottom:none}
+.btn-icon{background:none;border:none;cursor:pointer;color:#8e8e93;font-size:17px;padding:4px;min-width:32px;min-height:32px}
+.add-row{display:flex;gap:8px;margin-top:8px}
+.add-row input{margin-bottom:0;flex:1}
+.add-row button{white-space:nowrap;padding:10px 14px;background:#E8520A;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer}
+.sep{height:0.5px;background:rgba(0,0,0,0.1);margin:10px 0}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center;padding:20px}
+.overlay.show{display:flex}
+.login-box{background:#fff;border-radius:18px;padding:24px;width:100%;max-width:340px}
+.success-ico{font-size:36px;color:#16a34a;text-align:center;margin-bottom:8px}
+
+.qbtn{padding:7px 11px;font-size:12px;font-weight:500;border:1px solid rgba(0,0,0,0.15);border-radius:10px;background:#fff;color:#636366;cursor:pointer;white-space:nowrap}
+.qbtn.active{background:#E8520A;color:#fff;border-color:#E8520A}
+
+.maq-pill{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid rgba(0,0,0,0.15);background:#fff;color:#636366;cursor:pointer;user-select:none;transition:all .15s}
+.maq-pill.selected{background:#E8520A;color:#fff;border-color:#E8520A}
+.maq-pill-all{border-style:dashed}
+.maq-pill-all.selected{background:#1c1c1e;border-color:#1c1c1e;border-style:solid}
+
+.exp-btn{padding:7px 13px;font-size:12px;font-weight:500;border:1px solid rgba(0,0,0,0.15);border-radius:10px;background:#fff;color:#636366;cursor:pointer;white-space:nowrap}
+.exp-btn.active{background:#15803d;color:#fff;border-color:#15803d}
+.admin-stats{display:none}
+.admin-stats.show{display:grid}
+.motivo-aviso{font-size:11px;color:#E8520A;margin-top:-6px;margin-bottom:8px;display:none;align-items:center;gap:4px}
+.motivo-aviso.show{display:flex}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-title"><i class="ti ti-tool" style="color:#E8520A;margin-right:5px"></i>REPORTES DIARIOS FCB</div>
+    <div class="topbar-sub">Control de cambio de herramienta</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="role-badge badge-op" id="role-badge">Operario</span>
+    <button onclick="showLogin()" style="background:none;border:none;cursor:pointer;color:#8e8e93;font-size:20px;min-width:36px;min-height:36px" aria-label="Admin"><i class="ti ti-lock" id="lock-icon"></i></button>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="goTo('portada')" id="nav-portada"><i class="ti ti-home"></i>Inicio</button>
+  <button class="nav-btn" onclick="goTo('registro')" id="nav-registro"><i class="ti ti-clipboard-plus"></i>Registro</button>
+  <button class="nav-btn" onclick="goTo('historial')" id="nav-historial"><i class="ti ti-list-details"></i>Historial</button>
+  <button class="nav-btn locked" onclick="tryAdmin('reportes')" id="nav-reportes"><i class="ti ti-chart-bar"></i>Reportes</button>
+  <button class="nav-btn locked" onclick="tryAdmin('admin')" id="nav-admin"><i class="ti ti-shield"></i>Admin</button>
+</div>
+
+<!-- LOGIN OBLIGATORIO AL ABRIR LA APP -->
+<div class="overlay show" id="overlay-app-login" style="z-index:1000">
+  <div class="login-box">
+    <div style="font-size:17px;font-weight:700;margin-bottom:6px;color:#1c1c1e;display:flex;align-items:center;gap:8px"><i class="ti ti-tool" style="color:#E8520A"></i>REPORTES DIARIOS FCB</div>
+    <p style="font-size:12px;color:#8e8e93;margin-bottom:14px">Ingresá tu usuario y contraseña para usar la app hoy.</p>
+    <label>Usuario</label><input type="text" id="al-u" placeholder="N° de operario o admin" autocomplete="username"/>
+    <label>Contraseña</label><input type="password" id="al-p" placeholder="••••••" autocomplete="current-password"/>
+    <div id="al-err" style="font-size:12px;color:#dc2626;margin-top:-6px;margin-bottom:8px;display:none">Usuario o contraseña incorrectos.</div>
+    <button class="btn btn-primary" onclick="doAppLogin()" style="margin-top:8px"><i class="ti ti-login"></i>Ingresar</button>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div class="overlay" id="overlay">
+  <div class="login-box">
+    <div style="font-size:17px;font-weight:700;margin-bottom:16px;color:#1c1c1e;display:flex;align-items:center;gap:8px"><i class="ti ti-shield" style="color:#7c3aed"></i>Acceso administrador</div>
+    <label>Usuario</label><input type="text" id="lu" placeholder="admin" autocomplete="username"/>
+    <label>Contraseña</label><input type="password" id="lp" placeholder="••••••" autocomplete="current-password"/>
+    <div id="lerr" style="font-size:12px;color:#dc2626;margin-top:-6px;margin-bottom:8px;display:none">Usuario o contraseña incorrectos.</div>
+    <button class="btn btn-primary" onclick="doLogin()" style="margin-top:8px"><i class="ti ti-login"></i>Ingresar</button>
+    <button class="btn btn-secondary" onclick="hideLogin()"><i class="ti ti-x"></i>Cancelar</button>
+    <p style="font-size:11px;color:#8e8e93;margin-top:10px;text-align:center">Credenciales configuradas por el administrador</p>
+  </div>
+</div>
+
+<!-- FOTO EN GRANDE -->
+<div class="overlay" id="photo-modal" onclick="this.classList.remove('show')">
+  <img id="photo-modal-img" src="" alt="Foto" style="max-width:100%;max-height:85vh;border-radius:10px"/>
+</div>
+
+<!-- PORTADA -->
+<div class="page active" id="page-portada">
+  <img class="cover-img" id="cover-img" src="icons/logo-fcb.png" alt="Forestal Caja Bancaria — Piedras Coloradas" style="object-fit:contain;background:#fff;padding:20px"/>
+  <div class="cover-banner">
+    <div class="cover-title">REPORTES DIARIOS FCB</div>
+    <div class="cover-subtitle">Forestal Caja Bancaria — Piedras Coloradas</div>
+  </div>
+  <div class="cover-date-bar"><i class="ti ti-calendar" style="color:#E8520A;font-size:16px"></i><span id="cover-date"></span></div>
+  <div class="page-inner">
+    <div class="stat-grid admin-stats" id="portada-stats"></div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-bolt"></i>Acceso rápido</div>
+      <p style="font-size:13px;color:#636366;margin-bottom:14px;line-height:1.7">Bienvenido al sistema de reportes de <strong>Forestal Caja Bancaria</strong>.<br>Registrá un cambio de herramienta tocando el botón de abajo.</p>
+      <button class="btn btn-primary" onclick="goTo('registro')"><i class="ti ti-clipboard-plus"></i>Nuevo registro</button>
+      <button class="btn btn-secondary" onclick="goTo('historial')"><i class="ti ti-list-details"></i>Ver historial</button>
+      <button class="btn btn-secondary" onclick="showLogin()" id="btn-admin-portada" style="border-color:#8e8e93;color:#636366"><i class="ti ti-shield"></i>Acceso administrador</button>
+    </div>
+  </div>
+</div>
+
+<!-- REGISTRO -->
+<div class="page" id="page-registro">
+  <div class="page-inner">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-user"></i>Operario</div>
+      <label>N° de operario</label>
+      <input type="text" id="operario" placeholder="Ej: 922" inputmode="numeric" oninput="autoNombre()" list="operarios-list"/>
+      <datalist id="operarios-list"></datalist>
+      <div id="nombre-auto-badge" style="display:none;align-items:center;gap:6px;background:#f0fdf4;border:0.5px solid #bbf7d0;border-radius:10px;padding:8px 12px;margin-top:-6px;margin-bottom:10px;font-size:13px;color:#15803d">
+        <i class="ti ti-user-check" style="font-size:16px"></i>
+        <span id="nombre-auto-txt"></span>
+      </div>
+      <input type="hidden" id="nombre"/>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-calendar"></i>Inicio del cambio</div>
+      <div class="field-row">
+        <div><label>Fecha</label><input type="date" id="fecha" oninput="setHora()"/></div>
+        <div><label>Hora inicio</label><input type="time" id="hora-inicio-input" step="1" style="margin-bottom:0"/></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-settings"></i>Datos del cambio</div>
+      <label>Sector</label><select id="sector" onchange="onSector()"></select>
+      <label>Máquina</label><select id="maquina" onchange="onMaquina()"></select>
+      <label>Código de motivo</label>
+      <select id="motivo"></select>
+      <div class="motivo-aviso" id="motivo-aviso">
+        <i class="ti ti-info-circle" style="font-size:13px"></i>
+        <span>Mostrando códigos extendidos para <strong>General</strong></span>
+      </div>
+      <label>Observaciones (opcional)</label>
+      <textarea id="obs" rows="2" placeholder="Notas adicionales..."></textarea>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-camera"></i>Foto (opcional)</div>
+      <img id="foto-prev" class="photo-preview-img" alt="Vista previa"/>
+      <div class="photo-box" onclick="document.getElementById('foto-input').click()">
+        <i class="ti ti-upload" style="font-size:24px;color:#8e8e93"></i>
+        <div style="font-size:13px;color:#8e8e93;margin-top:6px" id="foto-lbl">Tocar para adjuntar foto</div>
+      </div>
+      <input type="file" id="foto-input" accept="image/*" capture="environment" style="display:none" onchange="onFoto(event)"/>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-send"></i>Enviar reporte</div>
+      <button class="btn btn-primary" id="btn-enviar" onclick="enviar()"><i class="ti ti-send"></i>Enviar reporte</button>
+      <div class="sent-box" id="sent-box">
+        <div class="success-ico"><i class="ti ti-circle-check"></i></div>
+        <div style="text-align:center;margin-bottom:10px">
+          <div style="font-size:15px;font-weight:700;color:#1c1c1e">Reporte enviado</div>
+          <div style="font-size:12px;color:#636366" id="sent-ts"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;background:#f2f2f7;border-radius:10px;padding:12px">
+          <div><div style="font-size:11px;color:#8e8e93">Demora total</div><div class="delay-highlight" id="delay-val">—</div></div>
+          <div><div style="font-size:11px;color:#8e8e93">Inicio</div><div style="font-size:13px;font-weight:600" id="delay-ini">—</div></div>
+          <div><div style="font-size:11px;color:#8e8e93">Fin</div><div style="font-size:13px;font-weight:600" id="delay-fin">—</div></div>
+        </div>
+        <button class="btn btn-secondary" id="btn-editar-reporte" onclick="toggleEditarReporte()"><i class="ti ti-edit"></i>Editar máquina / código</button>
+        <div id="edit-reporte-form" style="display:none;margin-top:8px;background:#f2f2f7;border-radius:10px;padding:12px">
+          <label>Máquina</label><select id="edit-maquina" onchange="onEditMaquina()" style="margin-bottom:10px"></select>
+          <label>Código de motivo</label><select id="edit-motivo"></select>
+          <button class="btn btn-primary" onclick="guardarEdicionReporte()" style="margin-top:0"><i class="ti ti-check"></i>Guardar cambios</button>
+        </div>
+        <button class="btn btn-secondary" onclick="nuevoReg()"><i class="ti ti-plus"></i>Nuevo registro</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORIAL -->
+<div class="page" id="page-historial">
+  <div class="page-inner">
+    <div class="filter-row">
+      <select class="filter-sel" id="f-sector" onchange="onFSector()"><option value="">Todos los sectores</option></select>
+    </div>
+    <div style="margin-bottom:8px">
+      <div style="font-size:11px;color:#8e8e93;margin-bottom:5px;font-weight:500">MÁQUINAS <span id="maq-sel-count" style="color:#E8520A"></span></div>
+      <div id="maq-checkboxes" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+      <button class="qbtn active" id="qb-semana" onclick="setQuick('semana',this)">Esta semana</button>
+      <button class="qbtn" id="qb-mes" onclick="setQuick('mes',this)">Este mes</button>
+      <button class="qbtn" id="qb-mes-ant" onclick="setQuick('mes-ant',this)">Mes anterior</button>
+      <button class="qbtn" id="qb-todo" onclick="setQuick('todo',this)">Todo</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+      <div style="flex:1">
+        <div style="font-size:11px;color:#8e8e93;margin-bottom:3px">Desde</div>
+        <input type="date" id="f-desde" onchange="setQuick('rango',null)" style="margin-bottom:0;font-size:13px;padding:8px 10px"/>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:11px;color:#8e8e93;margin-bottom:3px">Hasta</div>
+        <input type="date" id="f-hasta" onchange="setQuick('rango',null)" style="margin-bottom:0;font-size:13px;padding:8px 10px"/>
+      </div>
+    </div>
+    <div class="stat-grid" id="hist-stats"></div>
+    <div class="card" id="hist-list"><p style="text-align:center;color:#8e8e93;font-size:13px;padding:16px">No hay registros aún.</p></div>
+  </div>
+</div>
+
+<!-- REPORTES -->
+<div class="page" id="page-reportes">
+  <div class="page-inner">
+    <div style="margin-bottom:10px"><span class="role-badge badge-admin" style="font-size:12px;padding:4px 12px"><i class="ti ti-shield" style="font-size:12px;margin-right:3px"></i>Solo administrador</span></div>
+    <div class="period-sel">
+      <button class="period-btn active" onclick="setPer('semana',this)">Semana</button>
+      <button class="period-btn" onclick="setPer('mes',this)">Mes</button>
+      <button class="period-btn" onclick="setPer('anual',this)">Anual</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;align-items:flex-end">
+      <div style="flex:1">
+        <div style="font-size:11px;color:#8e8e93;margin-bottom:3px">Desde</div>
+        <input type="date" id="rep-desde" onchange="setPerRango()" style="margin-bottom:0;font-size:13px;padding:8px 10px"/>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:11px;color:#8e8e93;margin-bottom:3px">Hasta</div>
+        <input type="date" id="rep-hasta" onchange="setPerRango()" style="margin-bottom:0;font-size:13px;padding:8px 10px"/>
+      </div>
+      <button class="btn btn-primary" style="width:auto;padding:9px 14px;margin-bottom:0;align-self:flex-end" onclick="setPerRango()"><i class="ti ti-search"></i>Aplicar</button>
+    </div>
+    <div class="card" style="margin-bottom:10px">
+      <div class="card-title"><i class="ti ti-file-type-doc"></i>Detallado semanal de fallas — Aserradero</div>
+      <div style="display:flex;gap:6px;align-items:flex-end">
+        <div style="flex:1">
+          <div style="font-size:11px;color:#8e8e93;margin-bottom:3px">Elegí cualquier día de la semana a informar</div>
+          <input type="date" id="sem-fecha" style="margin-bottom:0;font-size:13px;padding:8px 10px"/>
+        </div>
+        <button class="btn btn-primary" style="width:auto;padding:9px 14px;margin-bottom:0" onclick="descargarDetalladoSemanal()"><i class="ti ti-download"></i>Word</button>
+      </div>
+    </div>
+    <div class="rep-tabs">
+      <button class="rep-tab active" onclick="setRepTab('general',this)"><i class="ti ti-layout-dashboard" style="margin-right:3px"></i>General</button>
+      <button class="rep-tab" onclick="setRepTab('fallas',this)"><i class="ti ti-alert-triangle" style="margin-right:3px"></i>Fallas</button>
+      <button class="rep-tab" onclick="setRepTab('operarios',this)"><i class="ti ti-users" style="margin-right:3px"></i>Operarios</button>
+      <button class="rep-tab" onclick="setRepTab('maquinas',this)"><i class="ti ti-cpu" style="margin-right:3px"></i>Máquinas</button>
+      <button class="rep-tab" onclick="setRepTab('codigos',this)"><i class="ti ti-tags" style="margin-right:3px"></i>Códigos</button>
+    </div>
+    <div class="rep-section" id="rs-fallas">
+      <div id="fallas-top"></div>
+      <div class="card"><div class="card-title"><i class="ti ti-chart-pie"></i>Distribución de fallas (minutos)</div><div class="chart-wrap" style="height:230px"><canvas id="cFallasPie" role="img" aria-label="Distribución de fallas en minutos">Fallas pie.</canvas></div></div>
+      <div class="card" style="margin-top:8px"><div class="card-title"><i class="ti ti-chart-bar"></i>Minutos por día, apilado por falla</div><div class="chart-wrap" style="height:250px"><canvas id="cFallasStack" role="img" aria-label="Minutos por día apilados por falla">Fallas por día.</canvas></div></div>
+      <div class="card" style="margin-top:8px"><div class="card-title"><i class="ti ti-list-numbers"></i>Detalle — minutos y cantidad por falla</div><div id="rank-fallas"></div></div>
+    </div>
+    <div class="rep-section active" id="rs-general">
+      <div class="stat-grid" id="rep-stats"></div>
+      <div class="card" style="border:1.5px solid #E8520A;margin-bottom:8px"><div class="card-title"><i class="ti ti-clock-x"></i>Reporte de fallas del período</div><div id="real-perdido"></div></div>
+      <div class="card"><div class="card-title"><i class="ti ti-chart-bar"></i>Tiempo perdido por máquina (min)</div><p style="font-size:11px;color:#8e8e93;margin-bottom:6px"><i class="ti ti-hand-click" style="font-size:12px"></i> Tocá una barra para ver el detalle de fallas de esa máquina</p><div class="chart-wrap" style="height:200px"><canvas id="cMaq" role="img" aria-label="Tiempo por máquina">Tiempo por máquina.</canvas></div></div>
+      <div class="card" id="maq-detail" style="display:none;margin-top:8px;border:1.5px solid #E8520A">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div class="card-title" style="margin-bottom:0" id="maq-detail-title"></div>
+          <button class="btn-icon" onclick="cerrarMaqDetail()" aria-label="Cerrar detalle"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="chart-wrap" style="height:180px"><canvas id="cMaqDetail">Detalle de fallas.</canvas></div>
+        <div id="maq-detail-list" style="margin-top:8px"></div>
+      </div>
+      <div class="card" style="margin-top:8px"><div class="card-title"><i class="ti ti-chart-pie"></i>Distribución de fallas (minutos)</div><div class="chart-wrap" style="height:220px"><canvas id="cFallasGenPie" role="img" aria-label="Distribución de fallas en minutos">Fallas.</canvas></div><div id="rank-fallas-gen" style="margin-top:8px"></div></div>
+      <div class="card" style="margin-top:8px"><div class="card-title"><i class="ti ti-table"></i>Detalle por sector</div><div id="tabla"></div></div>
+    </div>
+    <div class="rep-section" id="rs-operarios">
+      <div class="card"><div class="card-title"><i class="ti ti-trophy"></i>Ranking por operario</div><div id="top-op"></div><div class="chart-wrap" style="height:220px"><canvas id="cOp" role="img" aria-label="Reportes por operario">Operarios.</canvas></div></div>
+      <div class="card" style="margin-top:8px"><div class="card-title"><i class="ti ti-list-numbers"></i>Detalle</div><div id="rank-op"></div></div>
+    </div>
+    <div class="rep-section" id="rs-maquinas">
+      <div class="card"><div class="card-title"><i class="ti ti-chart-bar"></i>Reportes por máquina</div><div id="top-maq"></div><div class="chart-wrap" style="height:220px"><canvas id="cMaqR" role="img" aria-label="Reportes por máquina">Máquinas.</canvas></div></div>
+      <div class="card" style="margin-top:8px"><div class="card-title"><i class="ti ti-list-numbers"></i>Ranking</div><div id="rank-maq"></div></div>
+    </div>
+    <div class="rep-section" id="rs-codigos">
+      <div class="card"><div class="card-title"><i class="ti ti-chart-donut"></i>Distribución % por código — Máquinas (todas menos General)</div><div id="top-cod-maq"></div><div class="chart-wrap" style="height:230px"><canvas id="cCodMaq" role="img" aria-label="Distribución por código - Máquinas">Códigos máquinas.</canvas></div></div>
+      <div class="card" style="margin-top:8px"><div class="card-title"><i class="ti ti-list-numbers"></i>Ranking — Máquinas</div><div id="rank-cod-maq"></div></div>
+      <div class="card" style="margin-top:8px"><div class="card-title" style="color:#E8520A"><i class="ti ti-chart-donut"></i>Distribución % por código — General</div><div id="top-cod-gen"></div><div class="chart-wrap" style="height:230px"><canvas id="cCodGen" role="img" aria-label="Distribución por código - General">Códigos general.</canvas></div></div>
+      <div class="card" style="margin-top:8px"><div class="card-title"><i class="ti ti-list-numbers"></i>Ranking — General</div><div id="rank-cod-gen"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div class="page" id="page-admin">
+  <div class="page-inner">
+    <div style="margin-bottom:10px"><span class="role-badge badge-admin" style="font-size:12px;padding:4px 12px"><i class="ti ti-shield" style="font-size:12px;margin-right:3px"></i>Panel de administrador</span></div>
+
+    <!-- EXPORTAR EXCEL -->
+    <div class="card">
+      <div class="admin-sec-title" style="color:#15803d"><i class="ti ti-file-spreadsheet" style="margin-right:5px;font-size:13px"></i>Exportar datos a Excel</div>
+      <p style="font-size:12px;color:#636366;margin-bottom:12px;line-height:1.6">Descargá los registros filtrados por período. El archivo incluye: fecha, N° operario, nombre, máquina, sector, código de falla, descripción, hora inicio, hora fin y demora.</p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="exp-btn active" id="exp-hoy" onclick="setExpPer('hoy',this)">Hoy</button>
+        <button class="exp-btn" id="exp-semana" onclick="setExpPer('semana',this)">Esta semana</button>
+        <button class="exp-btn" id="exp-mes" onclick="setExpPer('mes',this)">Este mes</button>
+        <button class="exp-btn" id="exp-anual" onclick="setExpPer('anual',this)">Este año</button>
+        <button class="exp-btn" id="exp-todo" onclick="setExpPer('todo',this)">Todo</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <div style="flex:1">
+          <div style="font-size:11px;color:#8e8e93;margin-bottom:3px">Desde</div>
+          <input type="date" id="exp-desde" onchange="setExpPer('rango',null)" style="margin-bottom:0;font-size:13px;padding:8px 10px"/>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:11px;color:#8e8e93;margin-bottom:3px">Hasta</div>
+          <input type="date" id="exp-hasta" onchange="setExpPer('rango',null)" style="margin-bottom:0;font-size:13px;padding:8px 10px"/>
+        </div>
+      </div>
+      <div id="exp-preview" style="font-size:13px;color:#636366;margin-bottom:10px;padding:8px 10px;background:#f2f2f7;border-radius:8px;text-align:center"></div>
+      <button onclick="exportarExcel()" style="width:100%;padding:13px;background:#15803d;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px">
+        <i class="ti ti-download"></i> Descargar Excel
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="admin-sec-title">Sectores y máquinas</div>
+      <div id="admin-list"></div>
+      <div class="sep"></div>
+      <p style="font-size:13px;color:#636366;margin-bottom:6px">Agregar sector nuevo</p>
+      <div class="add-row"><input type="text" id="new-sec" placeholder="Nombre del sector..."/><button onclick="addSec()">Agregar</button></div>
+      <p id="sec-err" style="font-size:12px;color:#dc2626;margin-top:4px;display:none">Nombre inválido o ya existe.</p>
+    </div>
+    <div class="card">
+      <div class="admin-sec-title">Agregar máquina</div>
+      <label>Sector destino</label><select id="new-maq-sec"></select>
+      <div class="add-row"><input type="text" id="new-maq" placeholder="Nombre de la máquina..."/><button onclick="addMaq()">Agregar</button></div>
+      <p id="maq-err" style="font-size:12px;color:#dc2626;margin-top:4px;display:none">Seleccioná un sector e ingresá un nombre.</p>
+    </div>
+    <div class="card">
+      <div class="admin-sec-title">Códigos de motivo — generales</div>
+      <p style="font-size:12px;color:#636366;margin-bottom:8px">Visibles en todas las máquinas excepto General.</p>
+      <div id="motivos-list"></div>
+      <div class="sep"></div>
+      <p style="font-size:13px;color:#636366;margin-bottom:6px">Agregar código general</p>
+      <div class="add-row"><input type="text" id="new-mot" placeholder="Descripción del motivo..."/><button onclick="addMot()">Agregar</button></div>
+    </div>
+    <div class="card">
+      <div class="admin-sec-title" style="color:#E8520A">Códigos de motivo — General</div>
+      <p style="font-size:12px;color:#636366;margin-bottom:8px">Visibles solo cuando se selecciona la máquina <strong>General</strong>.</p>
+      <div id="motivos-general-list"></div>
+      <div class="sep"></div>
+      <p style="font-size:13px;color:#636366;margin-bottom:6px">Agregar código para General</p>
+      <div class="add-row"><input type="text" id="new-mot-gen" placeholder="Descripción del motivo..."/><button onclick="addMotGen()">Agregar</button></div>
+    </div>
+    <div class="card">
+      <div class="admin-sec-title">Operarios registrados</div>
+      <p style="font-size:12px;color:#636366;margin-bottom:8px">Al ingresar el N° de operario en el formulario, el nombre se completa automáticamente.</p>
+      <div id="operarios-admin-list"></div>
+      <div class="sep"></div>
+      <p style="font-size:13px;color:#636366;margin-bottom:6px">Agregar operario</p>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input type="text" id="new-op-num" placeholder="N° operario" inputmode="numeric" style="margin-bottom:0;width:35%"/>
+        <input type="text" id="new-op-nom" placeholder="Nombre completo" style="margin-bottom:0;flex:1"/>
+      </div>
+      <button onclick="addOperario()" style="width:100%;padding:10px;background:#E8520A;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Agregar operario</button>
+      <p id="op-err" style="font-size:12px;color:#dc2626;margin-top:6px;display:none">Ingresá número y nombre válidos.</p>
+    </div>
+
+    <div class="card">
+      <div class="admin-sec-title">Sesión</div>
+      <p style="font-size:13px;color:#636366;margin-bottom:10px">Sesión activa como <strong>admin</strong></p>
+      <button class="btn btn-danger" onclick="logout()"><i class="ti ti-logout"></i>Cerrar sesión de administrador</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ── Firebase (base de datos compartida en la nube) ──────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyDlL_Cqrd3IuUJUwBpAMwSIBk35wEy_N40",
+  authDomain: "fcb-reportes.firebaseapp.com",
+  projectId: "fcb-reportes",
+  storageBucket: "fcb-reportes.firebasestorage.app",
+  messagingSenderId: "851433974409",
+  appId: "1:851433974409:web:3e55f30a48f7fbf9b2f458"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ── Cloudinary (almacenamiento de fotos) ────────────────────────────
+const CLOUDINARY_CLOUD = 'drd9yupbi';
+const CLOUDINARY_PRESET = 'fcb_reportes';
+
+async function uploadFotoCloudinary(dataUrl){
+  try{
+    const fd = new FormData();
+    fd.append('file', dataUrl);
+    fd.append('upload_preset', CLOUDINARY_PRESET);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {method:'POST', body: fd});
+    if(!res.ok) throw new Error('Error al subir la foto');
+    const json = await res.json();
+    return json.secure_url || null;
+  }catch(e){
+    console.error('Error subiendo foto a Cloudinary:', e);
+    return null;
+  }
+}
+
+let isAdmin=false,fotoData=null,ultimoReporte=null;
+let registros=[],charts={},periodo='semana';
+let SECTORES={'Aserradero':['Gemela','H13','H24','Gemela y Horizontales','Multilamina','Canteadoras','Doguera','Despuntador de Topes','Chipera','Banda Larga','Cargadero 3','General']};
+
+// Máquinas cuya parada detiene TODA la producción del aserradero.
+// Solo estas cuentan para el "tiempo real de producción perdida" (unión de intervalos, sin duplicar solapamientos).
+// H13, H24, Multilamina, etc. pueden parar de forma independiente sin frenar la línea completa.
+
+let MOTIVOS=[
+  {cod:1,desc:'Falla mecánica — roturas, problemas mecánicos'},
+  {cod:5,desc:'Corte de energía'},
+  {cod:9,desc:'Cambio de hoja'}
+];
+
+// Código extra que solo aparece para la máquina Multilamina
+let MOTIVOS_MULTILAMINA_EXTRA=[
+  {cod:30,desc:'Dimensionado-Motocierra'}
+];
+
+// Códigos extra para Gemela, H13 y H24
+let MOTIVOS_GH_EXTRA=[
+  {cod:4,desc:'Cambio de corte'},
+  {cod:30,desc:'Dimensionado-Motocierra'}
+];
+
+// Códigos para la máquina Chipera
+let MOTIVOS_CHIPERA=[
+  {cod:2,desc:'Falla eléctrica'},
+  {cod:1,desc:'Falla mecánica — roturas, problemas mecánicos'},
+  {cod:22,desc:'Cambio de filo'}
+];
+
+// Códigos para Banda Larga y Cargadero 3
+let MOTIVOS_BANDA_CARGADERO=[
+  {cod:1,desc:'Falla mecánica — roturas, problemas mecánicos'},
+  {cod:2,desc:'Falla eléctrica'}
+];
+
+// Códigos para Gemela y Horizontales (todo junto)
+let MOTIVOS_GEM_HORIZ=[
+  {cod:22,desc:'Cambio de filo'},
+  {cod:4,desc:'Cambio de corte'}
+];
+
+let MOTIVOS_GENERAL=[
+  {cod:1,desc:'Falla mecánica — roturas, problemas mecánicos'},
+  {cod:2,desc:'Falla eléctrica'},
+  {cod:3,desc:'Falta madera — sin vigas en cargadero'},
+  {cod:4,desc:'Cambio de corte'},
+  {cod:5,desc:'Corte de energía'},
+  {cod:7,desc:'Falla chipera'},
+  {cod:8,desc:'Limpieza'},
+  {cod:9,desc:'Cambio de hoja'},
+  {cod:12,desc:'RR-HH'},
+  {cod:13,desc:'Rotura Pala'},
+  {cod:14,desc:'Viga trancada en cargadero'},
+  {cod:18,desc:'Descanso'},
+  {cod:19,desc:'Otro'},
+  {cod:20,desc:'Falla de aire - Compresor'},
+  {cod:21,desc:'Corte de Agua'}
+];
+
+const COLORS=['#E8520A','#0369a1','#16a34a','#7c3aed','#db2777','#ca8a04','#0891b2','#65a30d','#9333ea','#ea580c','#dc2626','#0284c7','#0f766e','#b45309','#4338ca','#be185d','#15803d','#7e22ce','#c2410c'];
+
+// Directorio de operarios: número → nombre
+let OPERARIOS = {
+  '922': 'Ariel Dimitroff'
+};
+
+function autoNombre(){
+  const num = document.getElementById('operario').value.trim();
+  const badge = document.getElementById('nombre-auto-badge');
+  const txt = document.getElementById('nombre-auto-txt');
+  if(OPERARIOS[num]){
+    document.getElementById('nombre').value = OPERARIOS[num];
+    txt.textContent = '✓ ' + OPERARIOS[num];
+    badge.style.display = 'flex';
+  } else {
+    document.getElementById('nombre').value = '';
+    badge.style.display = 'none';
+  }
+}
+
+function buildDatalist(){
+  const dl = document.getElementById('operarios-list');
+  if(!dl) return;
+  dl.innerHTML = '';
+  Object.entries(OPERARIOS).forEach(([num, nom]) => {
+    const o = document.createElement('option');
+    o.value = num;
+    o.label = nom;
+    dl.appendChild(o);
+  });
+}
+
+function addOperario(){
+  const num = document.getElementById('new-op-num').value.trim();
+  const nom = document.getElementById('new-op-nom').value.trim();
+  const err = document.getElementById('op-err');
+  if(!num || !nom){ err.style.display='block'; return; }
+  err.style.display = 'none';
+  OPERARIOS[num] = nom;
+  document.getElementById('new-op-num').value = '';
+  document.getElementById('new-op-nom').value = '';
+  buildDatalist();
+  renderOperariosAdmin();
+}
+
+function delOperario(num){
+  delete OPERARIOS[num];
+  buildDatalist();
+  renderOperariosAdmin();
+}
+
+function renderOperariosAdmin(){
+  const entries = Object.entries(OPERARIOS);
+  if(!entries.length){
+    document.getElementById('operarios-admin-list').innerHTML = '<p style="font-size:13px;color:#8e8e93;padding:4px 0">No hay operarios registrados.</p>';
+    return;
+  }
+  document.getElementById('operarios-admin-list').innerHTML = entries.map(([num, nom]) =>
+    `<div class="maq-item">
+      <span style="font-size:13px;color:#1c1c1e"><span style="font-weight:600;color:#E8520A;margin-right:8px">${num}</span>${nom}</span>
+      <button class="btn-icon" onclick="delOperario('${num}')" aria-label="Eliminar operario"><i class="ti ti-trash"></i></button>
+    </div>`
+  ).join('');
+}
+const allMaq=()=>Object.values(SECTORES).flat();
+const dc=(k)=>{if(charts[k]){charts[k].destroy();delete charts[k];}};
+
+function buildSelects(){
+  const sns=Object.keys(SECTORES);
+  ['sector','new-maq-sec'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    el.innerHTML='';
+    sns.forEach(s=>el.appendChild(new Option(s,s)));
+  });
+  const fs=document.getElementById('f-sector');
+  if(fs){fs.innerHTML='<option value="">Todos los sectores</option>';sns.forEach(s=>fs.appendChild(new Option(s,s)));}
+  if(document.getElementById('sector')) document.getElementById('sector').value=sns[0]||'';
+  onSector();
+}
+
+function buildMotivoSel(maq){
+  const el=document.getElementById('motivo');if(!el)return;
+  el.innerHTML='<option value="">Seleccionar motivo...</option>';
+  const esGeneral=maq==='General';
+  const lista=getMotivosParaMaquina(maq);
+  lista.forEach(m=>el.appendChild(new Option(m.cod+' — '+m.desc.toUpperCase(),m.cod)));
+  const aviso=document.getElementById('motivo-aviso');
+  if(aviso)aviso.classList.toggle('show',esGeneral);
+}
+
+function onSector(){
+  const s=document.getElementById('sector').value,el=document.getElementById('maquina');
+  el.innerHTML='<option value="">Seleccionar máquina...</option>';
+  if(s&&SECTORES[s])SECTORES[s].forEach(m=>el.appendChild(new Option(m,m)));
+  buildMotivoSel('');
+}
+
+function onMaquina(){
+  const maq=document.getElementById('maquina').value;
+  buildMotivoSel(maq);
+}
+
+function buildMaqPills(maqList){
+  const container = document.getElementById('maq-checkboxes');
+  if(!container) return;
+  container.innerHTML = '';
+  // "Todas" pill
+  const all = document.createElement('span');
+  all.className = 'maq-pill maq-pill-all selected';
+  all.dataset.maq = '__all__';
+  all.textContent = 'Todas';
+  all.onclick = () => toggleMaqPill('__all__');
+  container.appendChild(all);
+  // Individual machine pills
+  maqList.forEach(m => {
+    const pill = document.createElement('span');
+    pill.className = 'maq-pill';
+    pill.dataset.maq = m;
+    pill.textContent = m;
+    pill.onclick = () => toggleMaqPill(m);
+    container.appendChild(pill);
+  });
+  updMaqCount();
+}
+
+function toggleMaqPill(maq){
+  const pills = document.querySelectorAll('#maq-checkboxes .maq-pill');
+  const allPill = document.querySelector('#maq-checkboxes .maq-pill-all');
+  if(maq === '__all__'){
+    // Select all
+    pills.forEach(p => { p.classList.remove('selected'); });
+    allPill.classList.add('selected');
+  } else {
+    // Deselect "Todas"
+    allPill.classList.remove('selected');
+    const thisPill = document.querySelector(`#maq-checkboxes [data-maq="${maq}"]`);
+    if(thisPill) thisPill.classList.toggle('selected');
+    // If none selected, re-select all
+    const anySelected = [...document.querySelectorAll('#maq-checkboxes .maq-pill:not(.maq-pill-all)')].some(p=>p.classList.contains('selected'));
+    if(!anySelected) allPill.classList.add('selected');
+  }
+  updMaqCount();
+  renderHist();
+}
+
+function getSelectedMaqs(){
+  const allPill = document.querySelector('#maq-checkboxes .maq-pill-all');
+  if(allPill && allPill.classList.contains('selected')) return [];
+  return [...document.querySelectorAll('#maq-checkboxes .maq-pill:not(.maq-pill-all).selected')].map(p=>p.dataset.maq);
+}
+
+function updMaqCount(){
+  const sel = getSelectedMaqs();
+  const cnt = document.getElementById('maq-sel-count');
+  if(cnt) cnt.textContent = sel.length > 0 ? `(${sel.length} seleccionadas)` : '(todas)';
+}
+
+function onFSector(){
+  const s=document.getElementById('f-sector').value;
+  const list = s&&SECTORES[s] ? SECTORES[s] : allMaq();
+  buildMaqPills(list);
+  renderHist();
+}
+
+function renderAdmin(){
+  let h='';
+  Object.entries(SECTORES).forEach(([s,ml])=>{
+    h+=`<div style="margin-bottom:10px"><div class="sector-group-lbl"><span><i class="ti ti-building-factory" style="margin-right:5px"></i>${s}</span><button class="btn-icon" onclick="delSec('${s}')"><i class="ti ti-trash"></i></button></div>`;
+    ml.forEach((m,i)=>h+=`<div class="maq-item" style="padding-left:10px"><span style="font-size:14px"><i class="ti ti-cpu" style="font-size:13px;margin-right:6px;color:#8e8e93"></i>${m}</span><button class="btn-icon" onclick="delMaq('${s}',${i})"><i class="ti ti-trash"></i></button></div>`);
+    h+=`</div>`;
+  });
+  document.getElementById('admin-list').innerHTML=h;
+  let mh='';
+  MOTIVOS.forEach((m,i)=>mh+=`<div class="maq-item"><span style="font-size:13px"><span style="font-weight:600;color:#E8520A;margin-right:8px">${m.cod}</span>${m.desc.toUpperCase()}</span><button class="btn-icon" onclick="delMot(${i})"><i class="ti ti-trash"></i></button></div>`);
+  document.getElementById('motivos-list').innerHTML=mh;
+  let gh='';
+  MOTIVOS_GENERAL.forEach((m,i)=>gh+=`<div class="maq-item"><span style="font-size:13px"><span style="font-weight:600;color:#E8520A;margin-right:8px">${m.cod}</span>${m.desc.toUpperCase()}</span><button class="btn-icon" onclick="delMotGen(${i})"><i class="ti ti-trash"></i></button></div>`);
+  document.getElementById('motivos-general-list').innerHTML=gh;
+  renderOperariosAdmin();
+}
+
+function addSec(){const v=document.getElementById('new-sec').value.trim();const e=document.getElementById('sec-err');if(!v||SECTORES[v]){e.style.display='block';return;}e.style.display='none';SECTORES[v]=[];document.getElementById('new-sec').value='';buildSelects();renderAdmin();}
+function delSec(s){delete SECTORES[s];buildSelects();renderAdmin();}
+function addMaq(){const s=document.getElementById('new-maq-sec').value;const v=document.getElementById('new-maq').value.trim();const e=document.getElementById('maq-err');if(!s||!v){e.style.display='block';return;}e.style.display='none';if(!SECTORES[s])SECTORES[s]=[];SECTORES[s].push(v);document.getElementById('new-maq').value='';buildSelects();renderAdmin();}
+function delMaq(s,i){SECTORES[s].splice(i,1);buildSelects();renderAdmin();}
+function addMot(){const v=document.getElementById('new-mot').value.trim();if(!v)return;const nc=MOTIVOS.length?Math.max(...MOTIVOS.map(m=>m.cod))+1:1;MOTIVOS.push({cod:nc,desc:v});document.getElementById('new-mot').value='';renderAdmin();buildMotivoSel(document.getElementById('maquina').value);}
+function delMot(i){MOTIVOS.splice(i,1);renderAdmin();buildMotivoSel(document.getElementById('maquina').value);}
+function addMotGen(){const v=document.getElementById('new-mot-gen').value.trim();if(!v)return;const nc=MOTIVOS_GENERAL.length?Math.max(...MOTIVOS_GENERAL.map(m=>m.cod))+1:1;MOTIVOS_GENERAL.push({cod:nc,desc:v});document.getElementById('new-mot-gen').value='';renderAdmin();buildMotivoSel(document.getElementById('maquina').value);}
+function delMotGen(i){MOTIVOS_GENERAL.splice(i,1);renderAdmin();buildMotivoSel(document.getElementById('maquina').value);}
+
+// ── Sesión diaria (operario o administrador) ───────────────────────
+function todayStr(){return new Date().toISOString().split('T')[0];}
+
+function applyAdminUI(){
+  isAdmin=true;
+  document.getElementById('role-badge').textContent='Administrador';
+  document.getElementById('role-badge').className='role-badge badge-admin';
+  document.getElementById('lock-icon').className='ti ti-lock-open';
+  ['nav-reportes','nav-admin'].forEach(id=>document.getElementById(id).classList.remove('locked'));
+  document.getElementById('btn-admin-portada').style.display='none';
+  document.getElementById('portada-stats').classList.add('show');
+  updPortada();
+}
+
+function doAppLogin(){
+  const u=document.getElementById('al-u').value.trim();
+  const p=document.getElementById('al-p').value;
+  const err=document.getElementById('al-err');
+  let role=null;
+  if(u==='admin'&&p==='1234')role='admin';
+  else if(u&&p==='1234')role='operario';
+  if(!role){err.style.display='block';return;}
+  err.style.display='none';
+  try{localStorage.setItem('fcb_session',JSON.stringify({date:todayStr(),role}));}catch(e){}
+  if(role==='admin')applyAdminUI();
+  document.getElementById('overlay-app-login').classList.remove('show');
+}
+
+function checkSession(){
+  try{
+    const s=JSON.parse(localStorage.getItem('fcb_session')||'null');
+    if(s&&s.date===todayStr()){
+      if(s.role==='admin')applyAdminUI();
+      document.getElementById('overlay-app-login').classList.remove('show');
+    }
+  }catch(e){}
+}
+
+function showLogin(){if(isAdmin){logout();return;}document.getElementById('overlay').classList.add('show');}
+function hideLogin(){document.getElementById('overlay').classList.remove('show');document.getElementById('lerr').style.display='none';document.getElementById('lu').value='';document.getElementById('lp').value='';}
+function doLogin(){
+  const u=document.getElementById('lu').value.trim(),p=document.getElementById('lp').value;
+  if(u==='admin'&&p==='1234'){
+    applyAdminUI();hideLogin();
+    try{localStorage.setItem('fcb_session',JSON.stringify({date:todayStr(),role:'admin'}));}catch(e){}
+  } else document.getElementById('lerr').style.display='block';
+}
+function logout(){
+  isAdmin=false;
+  document.getElementById('role-badge').textContent='Operario';
+  document.getElementById('role-badge').className='role-badge badge-op';
+  document.getElementById('lock-icon').className='ti ti-lock';
+  ['nav-reportes','nav-admin'].forEach(id=>document.getElementById(id).classList.add('locked'));
+  document.getElementById('btn-admin-portada').style.display='';
+  document.getElementById('portada-stats').classList.remove('show');
+  try{localStorage.setItem('fcb_session',JSON.stringify({date:todayStr(),role:'operario'}));}catch(e){}
+  goTo('portada');
+}
+function tryAdmin(p){isAdmin?goTo(p):showLogin();}
+
+function goTo(id){
+  if((id==='reportes'||id==='admin')&&!isAdmin){showLogin();return;}
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.getElementById('nav-'+id).classList.add('active');
+  if(id==='portada')updPortada();
+  if(id==='registro')autoFechaHora(false);
+  if(id==='historial')renderHist();
+  if(id==='reportes'){const sf=document.getElementById('sem-fecha');if(sf&&!sf.value)sf.value=new Date().toISOString().split('T')[0];renderRep(periodo);}
+  if(id==='admin'){renderAdmin();setExpPer('hoy',document.getElementById('exp-hoy'));}
+}
+
+function updPortada(){
+  const now=new Date();
+  document.getElementById('cover-date').textContent=now.toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  if(!isAdmin)return;
+  const hoy=registros.filter(r=>r.fecha===now.toISOString().split('T')[0]);
+  const sem=registros.filter(r=>(now-new Date(r.fecha))/86400000<=7);
+  document.getElementById('portada-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Reportes hoy</div><div class="stat-val">${hoy.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Esta semana</div><div class="stat-val">${sem.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Máquinas activas</div><div class="stat-val">${new Set(sem.map(r=>r.maq)).size}</div></div>
+    <div class="stat-card"><div class="stat-label">Min. perdidos hoy</div><div class="stat-val">${hoy.reduce((s,r)=>s+r.dem,0)}</div></div>`;
+}
+
+function setHora(){
+  const n=new Date();
+  const hh=String(n.getHours()).padStart(2,'0'),mm=String(n.getMinutes()).padStart(2,'0'),ss=String(n.getSeconds()).padStart(2,'0');
+  document.getElementById('hora-inicio-input').value=`${hh}:${mm}:${ss}`;
+}
+
+// Completa fecha y hora automáticamente con el momento actual (si están vacías)
+function autoFechaHora(force){
+  const f=document.getElementById('fecha'),h=document.getElementById('hora-inicio-input');
+  if(!f||!h)return;
+  const n=new Date();
+  const fmt=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+  if(force||!f.value)f.value=fmt;
+  if(force||!h.value)setHora();
+}
+function onFoto(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{fotoData=ev.target.result;const p=document.getElementById('foto-prev');p.src=fotoData;p.style.display='block';document.getElementById('foto-lbl').textContent='Foto adjunta — tocar para cambiar';};r.readAsDataURL(f);}
+
+async function enviar(){
+  const op=document.getElementById('operario').value.trim(),nom=document.getElementById('nombre').value.trim(),fecha=document.getElementById('fecha').value;
+  const sec=document.getElementById('sector').value,maq=document.getElementById('maquina').value,mot=document.getElementById('motivo').value;
+  const tIni=document.getElementById('hora-inicio-input').value;
+  if(!op||!fecha||!sec||!maq||!mot||!tIni){alert('Completá todos los campos obligatorios y seleccioná la fecha.');return;}
+  const nomFinal = nom || op;
+  const lista=getMotivosParaMaquina(maq);
+  const motObj=lista.find(m=>m.cod==mot);
+  const horaInicio=new Date(fecha+'T'+(tIni.length===5?tIni+':00':tIni));
+  const fin=new Date();
+  let dem=Math.round((fin-horaInicio)/60000);
+  if(dem<0)dem=0;
+  const hf=fin.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const hi=horaInicio.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+  const btn=document.getElementById('btn-enviar');
+  btn.disabled=true;
+  btn.innerHTML='<i class="ti ti-loader-2"></i>Enviando...';
+
+  let fotoUrl=null;
+  if(fotoData){
+    fotoUrl=await uploadFotoCloudinary(fotoData);
+  }
+
+  const registro={op,nom:nomFinal,fecha,hi,hf,sec,maq,obs:document.getElementById('obs').value.trim(),
+    cod:motObj?motObj.cod:mot,motDesc:motObj?motObj.desc:'',dem,foto:fotoUrl};
+
+  let docRef;
+  try{
+    docRef=await db.collection('reportes').add({...registro, creado:firebase.firestore.FieldValue.serverTimestamp(), editado:false});
+  }catch(e){
+    console.error('Error guardando reporte:',e);
+    alert('No se pudo enviar el reporte. Verificá tu conexión a internet e intentá nuevamente.');
+    btn.disabled=false;btn.innerHTML='<i class="ti ti-send"></i>Enviar reporte';
+    return;
+  }
+
+  const localReg={...registro, ts:new Date(fecha), _order:Date.now(), _id:docRef.id, editado:false};
+  registros.push(localReg);
+  ultimoReporte=localReg;
+  document.getElementById('delay-val').textContent=dem+' min';
+  document.getElementById('delay-ini').textContent=hi;
+  document.getElementById('delay-fin').textContent=hf;
+  document.getElementById('sent-ts').textContent='Enviado el '+fecha+' a las '+hf;
+  document.getElementById('sent-box').classList.add('show');
+  document.getElementById('btn-editar-reporte').style.display='';
+  document.getElementById('edit-reporte-form').style.display='none';
+  btn.innerHTML='<i class="ti ti-send"></i>Enviar reporte';
+}
+
+// Devuelve la lista de motivos disponibles para una máquina dada (misma lógica que buildMotivoSel)
+function getMotivosParaMaquina(maq){
+  let lista;
+  if(maq==='General'){
+    lista=MOTIVOS_GENERAL;
+  }else if(maq==='Chipera'){
+    lista=MOTIVOS_CHIPERA;
+  }else if(maq==='Banda Larga'||maq==='Cargadero 3'){
+    lista=MOTIVOS_BANDA_CARGADERO;
+  }else if(maq==='Gemela y Horizontales'){
+    lista=MOTIVOS_GEM_HORIZ;
+  }else if(maq==='Doguera'||maq==='Despuntador de Topes'){
+    lista=MOTIVOS.filter(m=>m.cod!==5&&m.cod!==9);
+  }else{
+    lista=MOTIVOS.filter(m=>m.cod!==5);
+  }
+  if(maq==='Multilamina')lista=lista.concat(MOTIVOS_MULTILAMINA_EXTRA);
+  if(maq==='Gemela'||maq==='H13'||maq==='H24')lista=lista.concat(MOTIVOS_GH_EXTRA);
+  return lista;
+}
+
+function toggleEditarReporte(){
+  const form=document.getElementById('edit-reporte-form');
+  if(form.style.display==='block'){form.style.display='none';return;}
+  if(!ultimoReporte)return;
+  const sel=document.getElementById('edit-maquina');
+  sel.innerHTML='';
+  (SECTORES[ultimoReporte.sec]||[]).forEach(m=>sel.appendChild(new Option(m,m)));
+  sel.value=ultimoReporte.maq;
+  onEditMaquina();
+  form.style.display='block';
+}
+
+function onEditMaquina(){
+  if(!ultimoReporte)return;
+  const maq=document.getElementById('edit-maquina').value;
+  const lista=getMotivosParaMaquina(maq);
+  const sel=document.getElementById('edit-motivo');
+  sel.innerHTML='';
+  lista.forEach(m=>sel.appendChild(new Option(m.cod+' — '+m.desc.toUpperCase(),m.cod)));
+  if(lista.some(m=>m.cod==ultimoReporte.cod))sel.value=ultimoReporte.cod;
+}
+
+async function guardarEdicionReporte(){
+  if(!ultimoReporte||!ultimoReporte._id)return;
+  const maq=document.getElementById('edit-maquina').value;
+  const cod=document.getElementById('edit-motivo').value;
+  if(!maq||!cod){alert('Seleccioná máquina y código de motivo.');return;}
+  const lista=getMotivosParaMaquina(maq);
+  const motObj=lista.find(m=>m.cod==cod);
+  const motDesc=motObj?motObj.desc:'';
+  const codFinal=motObj?motObj.cod:cod;
+
+  try{
+    await db.collection('reportes').doc(ultimoReporte._id).update({maq, cod:codFinal, motDesc, editado:true});
+  }catch(e){
+    console.error('Error editando reporte:',e);
+    alert('No se pudo guardar la edición. Verificá tu conexión a internet e intentá nuevamente.');
+    return;
+  }
+
+  ultimoReporte.maq=maq;ultimoReporte.cod=codFinal;ultimoReporte.motDesc=motDesc;ultimoReporte.editado=true;
+  const idx=registros.findIndex(r=>r._id===ultimoReporte._id);
+  if(idx>-1)registros[idx]={...registros[idx],maq,cod:codFinal,motDesc,editado:true};
+
+  document.getElementById('edit-reporte-form').style.display='none';
+  document.getElementById('btn-editar-reporte').style.display='none';
+}
+
+function nuevoReg(){
+  ['operario','nombre','obs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('nombre-auto-badge').style.display='none';
+  document.getElementById('sector').value=Object.keys(SECTORES)[0]||'';
+  onSector();
+  autoFechaHora(true);
+  document.getElementById('sent-box').classList.remove('show');document.getElementById('btn-enviar').disabled=false;
+  document.getElementById('foto-prev').style.display='none';document.getElementById('foto-lbl').textContent='Tocar para adjuntar foto';
+  document.getElementById('foto-input').value='';fotoData=null;
+  document.getElementById('edit-reporte-form').style.display='none';
+  document.getElementById('btn-editar-reporte').style.display='';
+  ultimoReporte=null;
+}
+
+// Quick filter period state
+let currentQuick = 'semana';
+
+function setQuick(mode, btn){
+  currentQuick = mode;
+  document.querySelectorAll('.qbtn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  // Set date inputs for visual feedback
+  const now = new Date();
+  const fmt = d => d.toISOString().split('T')[0];
+  if(mode==='semana'){
+    const w = new Date(now); w.setDate(now.getDate()-7);
+    document.getElementById('f-desde').value = fmt(w);
+    document.getElementById('f-hasta').value = fmt(now);
+  } else if(mode==='mes'){
+    const m = new Date(now.getFullYear(), now.getMonth(), 1);
+    document.getElementById('f-desde').value = fmt(m);
+    document.getElementById('f-hasta').value = fmt(now);
+  } else if(mode==='mes-ant'){
+    const ms = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    const me = new Date(now.getFullYear(), now.getMonth(), 0);
+    document.getElementById('f-desde').value = fmt(ms);
+    document.getElementById('f-hasta').value = fmt(me);
+  } else if(mode==='todo'){
+    document.getElementById('f-desde').value = '';
+    document.getElementById('f-hasta').value = '';
+  }
+  renderHist();
+}
+
+function getFiltered(per,sec,maq){
+  const desde = document.getElementById('f-desde') ? document.getElementById('f-desde').value : '';
+  const hasta = document.getElementById('f-hasta') ? document.getElementById('f-hasta').value : '';
+  return registros.filter(r=>{
+    let ok=true;
+    if(desde && r.fecha < desde) ok=false;
+    if(hasta && r.fecha > hasta) ok=false;
+    if(sec&&r.sec!==sec)ok=false;
+    if(maq&&r.maq!==maq)ok=false;
+    return ok;
+  });
+}
+
+function showFotoModal(url){
+  document.getElementById('photo-modal-img').src=url;
+  document.getElementById('photo-modal').classList.add('show');
+}
+
+function renderHist(){
+  const sec=document.getElementById('f-sector').value;
+  const selectedMaqs=getSelectedMaqs();
+  const data=registros.filter(r=>{
+    const desde=document.getElementById('f-desde')?document.getElementById('f-desde').value:'';
+    const hasta=document.getElementById('f-hasta')?document.getElementById('f-hasta').value:'';
+    let ok=true;
+    if(desde&&r.fecha<desde)ok=false;
+    if(hasta&&r.fecha>hasta)ok=false;
+    if(sec&&r.sec!==sec)ok=false;
+    if(selectedMaqs.length>0&&!selectedMaqs.includes(r.maq))ok=false;
+    return ok;
+  }).sort((a,b)=>(b._order||0)-(a._order||0));
+  const tot=data.reduce((s,r)=>s+r.dem,0),avg=data.length?Math.round(tot/data.length):0;
+  document.getElementById('hist-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Cambios registrados</div><div class="stat-val">${data.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Tiempo total</div><div class="stat-val">${tot}<span style="font-size:13px"> min</span></div></div>
+    <div class="stat-card"><div class="stat-label">Promedio</div><div class="stat-val">${avg}<span style="font-size:13px"> min</span></div></div>
+    <div class="stat-card"><div class="stat-label">Máquinas</div><div class="stat-val">${new Set(data.map(r=>r.maq)).size}</div></div>`;
+  if(!data.length){document.getElementById('hist-list').innerHTML='<p style="text-align:center;color:#8e8e93;font-size:13px;padding:16px">Sin registros en este período.</p>';return;}
+  const bc=d=>d<15?'badge-green':d<30?'badge-amber':'badge-red';
+  document.getElementById('hist-list').innerHTML='<div class="card-title"><i class="ti ti-list-details"></i>Registros</div>'+
+    data.map(r=>`<div class="record-item"><div style="flex:1;min-width:0">
+      <div class="record-main">${r.maq}<span class="sector-tag"><i class="ti ti-building-factory" style="font-size:10px"></i>${r.sec}</span>${r.maq==='General'?'<span class="general-tag"><i class="ti ti-star" style="font-size:10px"></i>General</span>':''}</div>
+      <div class="record-sub"><span class="cod-badge">Cod.${r.cod}</span>${r.motDesc.toUpperCase()}</div>
+      <div class="record-sub">${r.op} · ${r.nom}</div>
+      <div class="record-sub">${r.fecha} · ${r.hi}→${r.hf}</div>
+      ${r.foto?`<img src="${r.foto}" onclick="event.stopPropagation();showFotoModal('${r.foto}')" style="width:54px;height:42px;object-fit:cover;border-radius:6px;margin-top:5px;border:0.5px solid rgba(0,0,0,0.1);cursor:pointer" alt="Foto"/>`:''}
+      ${r.obs?`<div class="record-sub" style="font-style:italic">${r.obs}</div>`:''}
+    </div><span class="badge ${bc(r.dem)}" style="margin-left:8px">${r.dem} min</span></div>`).join('');
+}
+
+function setPer(p,btn){
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');periodo=p;
+  const now=new Date(), fmt=d=>d.toISOString().split('T')[0];
+  if(p==='semana'){
+    const w=new Date(now);w.setDate(now.getDate()-7);
+    document.getElementById('rep-desde').value=fmt(w);
+    document.getElementById('rep-hasta').value=fmt(now);
+  } else if(p==='mes'){
+    const m=new Date(now.getFullYear(),now.getMonth(),1);
+    document.getElementById('rep-desde').value=fmt(m);
+    document.getElementById('rep-hasta').value=fmt(now);
+  } else if(p==='anual'){
+    const y=new Date(now.getFullYear(),0,1);
+    document.getElementById('rep-desde').value=fmt(y);
+    document.getElementById('rep-hasta').value=fmt(now);
+  }
+  renderRep(p);
+}
+
+// Búsqueda manual por rango de fechas en Reportes
+function setPerRango(){
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  periodo='rango';
+  renderRep('rango');
+}
+
+// Filtra los registros según el rango de fechas de la página Reportes
+function getFilteredRep(){
+  const dEl=document.getElementById('rep-desde'),hEl=document.getElementById('rep-hasta');
+  // Si los inputs están vacíos (primera apertura), inicializar según el período activo
+  if(dEl&&!dEl.value&&!hEl.value&&periodo!=='rango'){
+    const now=new Date(), fmt=d=>d.toISOString().split('T')[0];
+    let ini;
+    if(periodo==='mes')ini=new Date(now.getFullYear(),now.getMonth(),1);
+    else if(periodo==='anual')ini=new Date(now.getFullYear(),0,1);
+    else{ini=new Date(now);ini.setDate(now.getDate()-7);}
+    dEl.value=fmt(ini);hEl.value=fmt(now);
+  }
+  const desde=dEl?dEl.value:'',hasta=hEl?hEl.value:'';
+  return registros.filter(r=>{
+    if(desde&&r.fecha<desde)return false;
+    if(hasta&&r.fecha>hasta)return false;
+    return true;
+  });
+}
+function setRepTab(t,btn){document.querySelectorAll('.rep-tab').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.rep-section').forEach(s=>s.classList.remove('active'));btn.classList.add('active');document.getElementById('rs-'+t).classList.add('active');renderRep(periodo);}
+function rankBars(el,entries,maxV,colorFn){el.innerHTML=entries.map(([lbl,v],i)=>`<div class="rank-wrap"><div class="rank-lbl"><span>${['🥇 ','🥈 ','🥉 '][i]||''}${lbl}</span><span style="font-weight:600">${v}</span></div><div class="rank-bg"><div class="rank-fill" style="width:${Math.round(v/maxV*100)}%;background:${colorFn(i)}"></div></div></div>`).join('');}
+
+// Agrupa registros por falla: devuelve [[etiqueta,{min,cnt}],...] ordenado por minutos desc.
+function aggFallas(dataset){
+  const bf={};
+  dataset.forEach(r=>{
+    const k='Cod.'+r.cod+' — '+(r.motDesc||'Sin descripción').toUpperCase();
+    if(!bf[k])bf[k]={min:0,cnt:0};
+    bf[k].min+=r.dem;bf[k].cnt++;
+  });
+  return Object.entries(bf).sort((a,b)=>b[1].min-a[1].min);
+}
+
+// Lista HTML de fallas con minutos y cantidad
+// Abre/cierra un bloque desplegable dentro del elemento clickeado
+function toggleDespl(el){
+  const d=el.querySelector('.despl-det');if(!d)return;
+  const abierto=d.style.display!=='none';
+  d.style.display=abierto?'none':'block';
+  const ch=el.querySelector('.despl-chev');
+  if(ch)ch.style.transform=abierto?'':'rotate(90deg)';
+}
+
+// Lista de fallas. Si se pasa dataset, cada falla se puede desplegar mostrando las máquinas donde se originó.
+function fallasListHTML(s,totMin,dataset){
+  if(!s.length)return '<p style="font-size:13px;color:#8e8e93">Sin datos en el período seleccionado.</p>';
+  return s.map(([k,v],i)=>{
+    const p=Math.round(v.min/totMin*100);
+    let det='',chev='';
+    if(dataset){
+      const bm={};
+      dataset.forEach(r=>{
+        const kk='Cod.'+r.cod+' — '+(r.motDesc||'Sin descripción').toUpperCase();
+        if(kk!==k)return;
+        if(!bm[r.maq])bm[r.maq]={min:0,cnt:0};bm[r.maq].min+=r.dem;bm[r.maq].cnt++;
+      });
+      const filas=Object.entries(bm).sort((a,b)=>b[1].min-a[1].min).map(([m,mv])=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 4px 3px 20px"><span><i class="ti ti-cpu" style="font-size:11px;color:#8e8e93;margin-right:3px"></i>${m}</span><span style="color:#8e8e93">${mv.cnt} ${mv.cnt===1?'falla':'fallas'}</span><span style="font-weight:600">${mv.min} min</span></div>`).join('');
+      det=`<div class="despl-det" style="display:none;background:rgba(232,82,10,0.06);border-radius:8px;margin-top:5px;padding:4px 4px">${filas}</div>`;
+      chev='<i class="ti ti-chevron-right despl-chev" style="font-size:12px;color:#8e8e93;transition:transform .15s"></i>';
+    }
+    return `<div class="rank-wrap" ${dataset?'onclick="toggleDespl(this)" style="cursor:pointer"':''}><div class="rank-lbl"><span style="display:flex;align-items:center;gap:6px">${chev}<span style="width:10px;height:10px;border-radius:2px;background:${COLORS[i%COLORS.length]};display:inline-block"></span>${k}</span><span style="font-weight:600">${v.min} min <span style="color:#8e8e93;font-weight:400">· ${v.cnt} ${v.cnt===1?'falla':'fallas'} (${p}%)</span></span></div><div class="rank-bg"><div class="rank-fill" style="width:${p}%;background:${COLORS[i%COLORS.length]}"></div></div>${det}</div>`;
+  }).join('');
+}
+
+// Torta de fallas con tooltip de minutos, cantidad y %
+function pieFallas(canvasId,chartKey,s,totMin){
+  dc(chartKey);
+  if(!s.length)return;
+  charts[chartKey]=new Chart(document.getElementById(canvasId),{type:'pie',data:{labels:s.map(([k])=>k),datasets:[{data:s.map(([,v])=>v.min),backgroundColor:s.map((_,i)=>COLORS[i%COLORS.length]),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const v=s[c.dataIndex][1];const p=Math.round(v.min/totMin*100);return `${c.label}: ${v.min} min · ${v.cnt} ${v.cnt===1?'falla':'fallas'} (${p}%)`;}}}}}});
+}
+
+// Detalle de fallas de una máquina en el rango de fechas seleccionado
+function showMaqDetail(maq){
+  const data=getFilteredRep().filter(r=>r.maq===maq);
+  const s=aggFallas(data);
+  const totMin=s.reduce((t,[,v])=>t+v.min,0)||1;
+  const desde=document.getElementById('rep-desde').value,hasta=document.getElementById('rep-hasta').value;
+  document.getElementById('maq-detail-title').innerHTML=`<i class="ti ti-cpu"></i>${maq} — fallas ${desde&&hasta?`del ${desde} al ${hasta}`:'del período'}`;
+  document.getElementById('maq-detail-list').innerHTML=fallasListHTML(s,totMin);
+  pieFallas('cMaqDetail','maqdet',s,totMin);
+  const box=document.getElementById('maq-detail');
+  box.style.display='block';
+  box.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function cerrarMaqDetail(){
+  dc('maqdet');
+  document.getElementById('maq-detail').style.display='none';
+}
+
+// ══════════════ INFORME WORD PARA GERENCIA ══════════════
+
+// Máquinas cuya parada detiene TODA la producción (se suman al tiempo real perdido).
+// H13, H24, Multilamina, etc. pueden parar sin detener el resto, por eso se informan aparte.
+const MAQUINAS_PARAN_TODO=['Gemela','Gemela y Horizontales','Cargadero 2','Cargadero 3','General'];
+
+function parseHoraMin(h){
+  if(!h)return null;
+  const p=String(h).split(':').map(Number);
+  if(isNaN(p[0])||isNaN(p[1]))return null;
+  return p[0]*60+p[1]+(p[2]?p[2]/60:0);
+}
+
+// Tiempo real de producción perdida: unión de intervalos solapados (por día)
+// de las máquinas que detienen toda la línea. No es la suma simple.
+function minutosRealesPerdidos(data){
+  const porDia={};
+  data.filter(r=>MAQUINAS_PARAN_TODO.includes(r.maq)).forEach(r=>{
+    let a=parseHoraMin(r.hi),b=parseHoraMin(r.hf);
+    if(a==null)return;
+    if(b==null||b<=a)b=a+(r.dem||0);
+    if(b<=a)return;
+    (porDia[r.fecha]=porDia[r.fecha]||[]).push([a,b]);
+  });
+  let tot=0;
+  Object.values(porDia).forEach(ints=>{
+    ints.sort((x,y)=>x[0]-y[0]);
+    let cs=ints[0][0],ce=ints[0][1];
+    for(let i=1;i<ints.length;i++){
+      const s2=ints[i][0],e2=ints[i][1];
+      if(s2<=ce)ce=Math.max(ce,e2);
+      else{tot+=ce-cs;cs=s2;ce=e2;}
+    }
+    tot+=ce-cs;
+  });
+  return Math.round(tot);
+}
+
+function fmtHs(min){return `${min} min (${(min/60).toFixed(1)} hs)`;}
+
+// Número de semana ISO (la que se usa en los reportes internos, ej: "semana 25")
+function isoWeek(d){
+  const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  const dayNum=(date.getUTCDay()+6)%7;
+  date.setUTCDate(date.getUTCDate()-dayNum+3);
+  const firstThursday=new Date(Date.UTC(date.getUTCFullYear(),0,4));
+  const ftDayNum=(firstThursday.getUTCDay()+6)%7;
+  firstThursday.setUTCDate(firstThursday.getUTCDate()-ftDayNum+3);
+  return 1+Math.round((date-firstThursday)/(7*86400000));
+}
+
+// ══════════════ DETALLADO SEMANAL DE FALLAS (WORD) ══════════════
+function descargarDetalladoSemanal(){
+  const fSel=document.getElementById('sem-fecha').value;
+  if(!fSel){alert('Elegí un día de la semana que querés informar.');return;}
+  if(typeof docx==='undefined'){alert('No se pudo cargar el generador de Word. Verificá tu conexión a internet y recargá la app.');return;}
+
+  // Semana lunes→domingo que contiene la fecha elegida + número de semana ISO
+  const base=new Date(fSel+'T12:00:00');
+  const lunes=new Date(base);lunes.setDate(base.getDate()-((base.getDay()+6)%7));
+  const domingo=new Date(lunes);domingo.setDate(lunes.getDate()+6);
+  const fmt=d=>d.toISOString().split('T')[0];
+  const fmtUy=d=>d.toLocaleDateString('es-UY');
+  const desde=fmt(lunes),hasta=fmt(domingo);
+  const nSem=isoWeek(base);
+
+  const data=registros.filter(r=>r.sec==='Aserradero'&&r.fecha>=desde&&r.fecha<=hasta)
+    .sort((a,b)=>a.fecha===b.fecha?String(a.hi).localeCompare(String(b.hi)):a.fecha.localeCompare(b.fecha));
+  if(!data.length){alert(`No hay registros del Aserradero en la semana ${nSem} (${fmtUy(lunes)} al ${fmtUy(domingo)}).`);return;}
+
+  // ── Cálculos ──
+  const totalReportado=data.reduce((s,r)=>s+r.dem,0);
+  const realPerdido=minutosRealesPerdidos(data);
+  const minNoParan=data.filter(r=>!MAQUINAS_PARAN_TODO.includes(r.maq)).reduce((s,r)=>s+r.dem,0);
+  const bm={};data.forEach(r=>{if(!bm[r.maq])bm[r.maq]={min:0,cnt:0};bm[r.maq].min+=r.dem;bm[r.maq].cnt++;});
+  const porMaq=Object.entries(bm).sort((a,b)=>b[1].min-a[1].min);
+  // Pérdida REAL de producción por máquina (solo las que detienen toda la línea)
+  const realPorMaq=MAQUINAS_PARAN_TODO
+    .map(m=>[m,minutosRealesPerdidos(data.filter(r=>r.maq===m))])
+    .filter(([,mm])=>mm>0)
+    .sort((a,b)=>b[1]-a[1]);
+  let peorMaq=realPorMaq.length?realPorMaq[0][0]:null,peorMin=realPorMaq.length?realPorMaq[0][1]:0;
+  const peorEsReal=!!peorMaq;
+  if(!peorMaq&&porMaq.length){peorMaq=porMaq[0][0];peorMin=porMaq[0][1].min;}
+
+  const {Document,Packer,Paragraph,TextRun,ImageRun,Table,TableRow,TableCell,WidthType,AlignmentType,ShadingType,PageOrientation}=docx;
+  const NARANJA='E8520A';
+  const celda=(txt,o={})=>new TableCell({
+    shading:o.head?{type:ShadingType.CLEAR,fill:NARANJA}:o.fill?{type:ShadingType.CLEAR,fill:o.fill}:undefined,
+    columnSpan:o.span,verticalAlign:'center',margins:{top:50,bottom:50,left:80,right:80},
+    width:o.w?{size:o.w,type:WidthType.PERCENTAGE}:undefined,
+    children:[new Paragraph({alignment:o.center?AlignmentType.CENTER:AlignmentType.LEFT,
+      children:[new TextRun({text:String(txt),bold:o.head||o.bold,color:o.head?'FFFFFF':(o.color||'000000'),size:o.head?18:17,font:'Calibri'})]})]
+  });
+  const fila=c=>new TableRow({children:c});
+  const titulo=t=>new Paragraph({spacing:{before:240,after:80},children:[new TextRun({text:t,bold:true,size:26,color:NARANJA,font:'Calibri'})]});
+
+  // ── Tabla detallada: cada falla de la semana ──
+  const anchos=[9,12,22,13,6,10,28];
+  const filasDet=[fila([
+    celda('Fecha',{head:true,w:anchos[0]}),celda('Máquina',{head:true,w:anchos[1]}),
+    celda('Falla',{head:true,w:anchos[2]}),celda('Inicio – Fin',{head:true,center:true,w:anchos[3]}),
+    celda('Min',{head:true,center:true,w:anchos[4]}),celda('Operario',{head:true,w:anchos[5]}),
+    celda('Observaciones',{head:true,w:anchos[6]})
+  ])];
+  let fechaPrev='';
+  data.forEach(r=>{
+    const nuevaFecha=r.fecha!==fechaPrev;fechaPrev=r.fecha;
+    filasDet.push(fila([
+      celda(nuevaFecha?r.fecha.split('-').reverse().join('/'):'',{bold:nuevaFecha}),
+      celda(r.maq),
+      celda('Cod.'+r.cod+' — '+(r.motDesc||'')),
+      celda(`${r.hi||''} – ${r.hf||''}`,{center:true}),
+      celda(r.dem,{center:true,bold:true}),
+      celda(`${r.op}${r.nom&&r.nom!==r.op?' · '+r.nom:''}`),
+      celda(r.obs||'—')
+    ]));
+  });
+
+  // ── Resumen POR DÍA: máquinas y fallas de cada día + minutos reales del día ──
+  const diasSem=[...new Set(data.map(r=>r.fecha))].sort();
+  const nombreDia=f=>{const n=new Date(f+'T12:00:00').toLocaleDateString('es-UY',{weekday:'long'});return n.charAt(0).toUpperCase()+n.slice(1);};
+  const filasRes=[fila([celda('Día / Máquina / Falla',{head:true}),celda('Cantidad',{head:true,center:true}),celda('Minutos',{head:true,center:true})])];
+  diasSem.forEach(d=>{
+    const dd=data.filter(r=>r.fecha===d);
+    filasRes.push(fila([celda(`${nombreDia(d)} ${d.split('-').reverse().join('/')}`,{head:true,span:3})]));
+    const bmD={};dd.forEach(r=>{if(!bmD[r.maq])bmD[r.maq]={min:0,cnt:0};bmD[r.maq].min+=r.dem;bmD[r.maq].cnt++;});
+    Object.entries(bmD).sort((a,b)=>b[1].min-a[1].min).forEach(([m,v])=>{
+      const paraTodo=MAQUINAS_PARAN_TODO.includes(m);
+      filasRes.push(fila([celda(`${m} — ${fmtHs(v.min)} · ${v.cnt} ${v.cnt===1?'parada':'paradas'} · ${paraTodo?'DETIENE TODA LA PRODUCCIÓN':'no detiene el resto de la línea'}`,{bold:true,fill:paraTodo?'FDE4D6':'F2F2F2',span:3,color:paraTodo?'C2410C':'000000'})]));
+      aggFallas(dd.filter(r=>r.maq===m)).forEach(([k,f])=>{
+        filasRes.push(fila([celda('    '+k),celda(f.cnt,{center:true}),celda(f.min+' min',{center:true})]));
+      });
+    });
+    filasRes.push(fila([celda('MINUTOS REALES PERDIDOS DEL DÍA',{bold:true,span:2,fill:'FEF3C7',color:'C2410C'}),celda(fmtHs(minutosRealesPerdidos(dd)),{bold:true,center:true,fill:'FEF3C7',color:'C2410C'})]));
+  });
+
+  const doc=new Document({sections:[{properties:{page:{size:{orientation:PageOrientation.LANDSCAPE}}},children:[
+    new Paragraph({children:[new TextRun({text:'FORESTAL CAJA BANCARIA',bold:true,size:34,color:NARANJA,font:'Calibri'})]}),
+    new Paragraph({spacing:{after:60},children:[new TextRun({text:'Detallado semanal de fallas — Aserradero',bold:true,size:24,font:'Calibri'})]}),
+    new Paragraph({spacing:{after:200},children:[
+      new TextRun({text:`SEMANA ${nSem}`,bold:true,size:26,color:NARANJA,font:'Calibri'}),
+      new TextRun({text:`  ·  del ${fmtUy(lunes)} al ${fmtUy(domingo)}  ·  Generado el ${new Date().toLocaleDateString('es-UY')} desde FCB Reportes`,size:18,font:'Calibri'})]}),
+    titulo('Resumen de la semana'),
+    new Table({width:{size:100,type:WidthType.PERCENTAGE},rows:[
+      fila([celda('Indicador',{head:true}),celda('Valor',{head:true,center:true})]),
+      fila([celda('Tiempo real de producción perdida',{bold:true}),celda(fmtHs(realPerdido),{center:true,bold:true})]),
+      fila([celda('Paradas que no detienen la producción'),celda(fmtHs(minNoParan),{center:true})]),
+      fila([celda('Cantidad de fallas reportadas en la semana'),celda(data.length,{center:true})]),
+    ]}),
+    titulo('Reporte de fallas — detalle completo de la semana'),
+    new Table({width:{size:100,type:WidthType.PERCENTAGE},rows:filasDet}),
+    titulo('Resumen por día — máquinas y fallas'),
+    new Table({width:{size:100,type:WidthType.PERCENTAGE},rows:filasRes}),
+    ...(realPorMaq.length?[
+      titulo('Pérdida real de producción por máquina'),
+      new Table({width:{size:100,type:WidthType.PERCENTAGE},rows:[
+        fila([celda('Máquina',{head:true,w:68}),celda('Minutos reales perdidos',{head:true,center:true,w:32})]),
+        ...realPorMaq.map(([m,mm])=>fila([celda(m,{bold:true,fill:'FDE4D6',color:'C2410C'}),celda(fmtHs(mm),{center:true,bold:true})]))
+      ]})
+    ]:[]),
+    new Paragraph({spacing:{before:360}}),
+    new Table({width:{size:100,type:WidthType.PERCENTAGE},rows:[new TableRow({children:[
+      new TableCell({shading:{type:ShadingType.CLEAR,fill:NARANJA},verticalAlign:'center',width:{size:68,type:WidthType.PERCENTAGE},margins:{top:120,bottom:120,left:140,right:140},
+        children:[new Paragraph({children:[new TextRun({text:`TIEMPO REAL DE PRODUCCIÓN PERDIDA — SEMANA ${nSem}`,bold:true,size:24,color:'FFFFFF',font:'Calibri'})]})]}),
+      new TableCell({shading:{type:ShadingType.CLEAR,fill:'C2410C'},verticalAlign:'center',width:{size:32,type:WidthType.PERCENTAGE},margins:{top:120,bottom:120,left:140,right:140},
+        children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:fmtHs(realPerdido),bold:true,size:30,color:'FFFFFF',font:'Calibri'})]})]})
+    ]})]}),
+    ...(peorMaq?[new Table({width:{size:100,type:WidthType.PERCENTAGE},rows:[new TableRow({children:[
+      new TableCell({shading:{type:ShadingType.CLEAR,fill:'FDE4D6'},verticalAlign:'center',width:{size:68,type:WidthType.PERCENTAGE},margins:{top:100,bottom:100,left:140,right:140},
+        children:[new Paragraph({children:[new TextRun({text:peorEsReal?'MÁQUINA CON MAYOR PÉRDIDA REAL DE PRODUCCIÓN':'MÁQUINA CON MAYOR TIEMPO DE PARADAS',bold:true,size:20,color:'C2410C',font:'Calibri'})]})]}),
+      new TableCell({shading:{type:ShadingType.CLEAR,fill:'FDE4D6'},verticalAlign:'center',width:{size:32,type:WidthType.PERCENTAGE},margins:{top:100,bottom:100,left:140,right:140},
+        children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:`${peorMaq} — ${fmtHs(peorMin)}`,bold:true,size:22,color:'C2410C',font:'Calibri'})]})]})
+    ]})]})]:[]),
+
+  ]}]});
+
+  Packer.toBlob(doc).then(blob=>{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`Detallado_Fallas_Semana_${nSem}_Aserradero.docx`;
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+  }).catch(e=>{console.error(e);alert('Error al generar el informe: '+e.message);});
+}
+
+
+function renderRep(per){
+  const data=getFilteredRep();
+  const tot=data.reduce((s,r)=>s+r.dem,0),avg=data.length?Math.round(tot/data.length):0,maxD=data.length?Math.max(...data.map(r=>r.dem)):0;
+  document.getElementById('rep-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Total reportes</div><div class="stat-val">${data.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Tiempo perdido</div><div class="stat-val">${tot}<span style="font-size:13px"> min</span></div><div class="stat-sub">${(tot/60).toFixed(1)} hs</div></div>
+    <div class="stat-card"><div class="stat-label">Promedio</div><div class="stat-val">${avg}<span style="font-size:13px"> min</span></div></div>
+    <div class="stat-card"><div class="stat-label">Máx. demora</div><div class="stat-val">${maxD}<span style="font-size:13px"> min</span></div></div>`;
+  if(document.getElementById('rs-general').classList.contains('active')){
+    cerrarMaqDetail();
+    // Reporte de fallas: los que suman (detienen todo) y los que no + total real
+    const realP=minutosRealesPerdidos(data);
+    const bmSi={},bmNo={};
+    data.forEach(r=>{const t=MAQUINAS_PARAN_TODO.includes(r.maq)?bmSi:bmNo;if(!t[r.maq])t[r.maq]={min:0,cnt:0};t[r.maq].min+=r.dem;t[r.maq].cnt++;});
+    const filaM=([m,v])=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0 3px 8px;border-bottom:0.5px solid rgba(0,0,0,0.06)"><span>${m}</span><span style="color:#8e8e93">${v.cnt} ${v.cnt===1?'falla':'fallas'}</span><span style="font-weight:600">${v.min} min</span></div>`;
+    const minNo=Object.values(bmNo).reduce((t,v)=>t+v.min,0);
+    document.getElementById('real-perdido').innerHTML=`
+      <div style="text-align:center;margin-bottom:10px"><div style="font-size:11px;color:#8e8e93;text-transform:uppercase;letter-spacing:0.5px">Minutos reales perdidos</div><span style="font-size:32px;font-weight:700;color:#E8520A">${realP}</span><span style="font-size:14px;color:#8e8e93"> min (${(realP/60).toFixed(1)} hs)</span></div>
+      <div style="font-size:11px;font-weight:700;color:#c2410c;margin-bottom:2px"><i class="ti ti-alert-octagon" style="font-size:12px"></i> SÍ SUMAN — detienen toda la producción</div>
+      ${Object.entries(bmSi).sort((a,b)=>b[1].min-a[1].min).map(filaM).join('')||'<p style="font-size:12px;color:#8e8e93;padding-left:8px">Sin paradas de este tipo en el período.</p>'}
+      <div style="font-size:11px;font-weight:700;color:#8e8e93;margin:10px 0 2px"><i class="ti ti-circle-minus" style="font-size:12px"></i> NO SUMAN — no detienen el resto de la línea (${minNo} min aparte)</div>
+      ${Object.entries(bmNo).sort((a,b)=>b[1].min-a[1].min).map(filaM).join('')||'<p style="font-size:12px;color:#8e8e93;padding-left:8px">Sin paradas de este tipo en el período.</p>'}`;
+    const bm={};allMaq().forEach(m=>{bm[m]=0;});data.forEach(r=>{if(bm[r.maq]!==undefined)bm[r.maq]+=r.dem;});
+    const ae=Object.entries(bm).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+    dc('maq');charts['maq']=new Chart(document.getElementById('cMaq'),{type:'bar',data:{labels:ae.map(([m])=>m),datasets:[{data:ae.map(([,v])=>v),backgroundColor:COLORS.slice(0,ae.length),borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,onClick:(e,els)=>{if(els.length)showMaqDetail(ae[els[0].index][0]);},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.y} min — tocá para ver fallas`}}},scales:{y:{beginAtZero:true,ticks:{font:{size:10}}},x:{ticks:{font:{size:10},maxRotation:30}}}}});
+    // Torta de fallas del período (visible en la vista principal)
+    const sf=aggFallas(data);
+    const totMinF=sf.reduce((t,[,v])=>t+v.min,0)||1;
+    pieFallas('cFallasGenPie','fgenpie',sf,totMinF);
+    document.getElementById('rank-fallas-gen').innerHTML=fallasListHTML(sf,totMinF,data);
+    let th='';Object.entries(SECTORES).forEach(([s,ml])=>{const sd=data.filter(r=>r.sec===s);if(!sd.length)return;const sm=sd.reduce((t,r)=>t+r.dem,0);th+=`<div class="sector-group-lbl"><span><i class="ti ti-building-factory" style="margin-right:4px"></i>${s}</span><span>${sm} min</span></div>`;ml.forEach(m=>{const md=sd.filter(r=>r.maq===m);if(!md.length)return;const mm=md.reduce((t,r)=>t+r.dem,0);
+      const detM=aggFallas(md).map(([k,f])=>`<div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 4px 3px 26px"><span>${k}</span><span style="color:#8e8e93">${f.cnt} ${f.cnt===1?'cambio':'cambios'}</span><span style="font-weight:600">${f.min} min</span></div>`).join('');
+      th+=`<div onclick="toggleDespl(this)" style="cursor:pointer;border-bottom:0.5px solid rgba(0,0,0,0.07)"><div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0 5px 6px"><span><i class="ti ti-chevron-right despl-chev" style="font-size:11px;color:#8e8e93;transition:transform .15s;margin-right:3px"></i>${m}</span><span style="color:#8e8e93">${md.length} cambios</span><span style="font-weight:600">${mm} min</span></div><div class="despl-det" style="display:none;background:rgba(232,82,10,0.06);border-radius:8px;margin:0 0 6px 12px;padding:4px 4px">${detM}</div></div>`;});});
+    document.getElementById('tabla').innerHTML=th||'<p style="font-size:13px;color:#8e8e93">Sin datos.</p>';
+  }
+  if(document.getElementById('rs-fallas').classList.contains('active')){
+    const s=aggFallas(data);
+    const totMin=s.reduce((t,[,v])=>t+v.min,0)||1;
+    const topEl=document.getElementById('fallas-top');
+    if(s.length){
+      const p=Math.round(s[0][1].min/totMin*100);
+      topEl.innerHTML=`<div class="top-badge"><i class="ti ti-flame"></i>Falla con más tiempo: <strong>${s[0][0]}</strong> — ${s[0][1].min} min (${p}%)</div>`;
+    }else{topEl.innerHTML='';}
+    // Gráfica circular (minutos por falla)
+    pieFallas('cFallasPie','fpie',s,totMin);
+    // Gráfica de barras apiladas por día
+    dc('fstack');
+    const dias=[...new Set(data.map(r=>r.fecha))].sort();
+    if(s.length&&dias.length){
+      const datasets=s.map(([k],i)=>({
+        label:k,
+        data:dias.map(d=>data.filter(r=>r.fecha===d&&('Cod.'+r.cod+' — '+(r.motDesc||'Sin descripción').toUpperCase())===k).reduce((t,r)=>t+r.dem,0)),
+        backgroundColor:COLORS[i%COLORS.length]
+      }));
+      charts['fstack']=new Chart(document.getElementById('cFallasStack'),{type:'bar',data:{labels:dias.map(d=>d.slice(5)),datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y} min`}}},scales:{x:{stacked:true,ticks:{font:{size:9},maxRotation:60}},y:{stacked:true,beginAtZero:true,ticks:{font:{size:10}},title:{display:true,text:'Minutos',font:{size:10}}}}}});
+    }
+    // Detalle con minutos y cantidad
+    document.getElementById('rank-fallas').innerHTML=fallasListHTML(s,totMin,data);
+  }
+  if(document.getElementById('rs-operarios').classList.contains('active')){
+    const bo={};data.forEach(r=>{const k=r.nom+'|'+r.op;bo[k]=(bo[k]||0)+1;});
+    const s=Object.entries(bo).sort((a,b)=>b[1]-a[1]),mv=s[0]?s[0][1]:1;
+    if(s.length)document.getElementById('top-op').innerHTML=`<div class="top-badge"><i class="ti ti-trophy"></i>Más reportes: <strong>${s[0][0].split('|')[0]}</strong> — ${s[0][1]}</div>`;
+    dc('op');charts['op']=new Chart(document.getElementById('cOp'),{type:'bar',data:{labels:s.map(([k])=>k.split('|')[0]),datasets:[{data:s.map(([,v])=>v),backgroundColor:s.map((_,i)=>COLORS[i]||'#ccc'),borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{font:{size:10},stepSize:1}},x:{ticks:{font:{size:10},maxRotation:30}}}}});
+    rankBars(document.getElementById('rank-op'),s.map(([k,v])=>[k.split('|')[0]+' ('+k.split('|')[1]+')',v]),mv,i=>COLORS[i]||'#ccc');
+  }
+  if(document.getElementById('rs-maquinas').classList.contains('active')){
+    const bm={};allMaq().forEach(m=>{bm[m]=0;});data.forEach(r=>{if(bm[r.maq]!==undefined)bm[r.maq]++;});
+    const s=Object.entries(bm).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]),mv=s[0]?s[0][1]:1;
+    if(s.length)document.getElementById('top-maq').innerHTML=`<div class="top-badge"><i class="ti ti-award"></i>Más reportes: <strong>${s[0][0]}</strong> — ${s[0][1]}</div>`;
+    dc('mr');charts['mr']=new Chart(document.getElementById('cMaqR'),{type:'bar',data:{labels:s.map(([m])=>m),datasets:[{data:s.map(([,v])=>v),backgroundColor:s.map((_,i)=>COLORS[i]||'#ccc'),borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{font:{size:10},stepSize:1}},x:{ticks:{font:{size:10},maxRotation:30}}}}});
+    rankBars(document.getElementById('rank-maq'),s,mv,i=>COLORS[i]||'#ccc');
+  }
+  if(document.getElementById('rs-codigos').classList.contains('active')){
+    const MAQ_ESPECIFICAS=['Gemela','H13','H24','Gemela y Horizontales','Multilamina','Canteadoras','Doguera','Despuntador de Topes','Chipera','Banda Larga','Cargadero 3'];
+    const renderCodPie=(dataset, canvasId, topId, rankId, chartKey)=>{
+      const bc={};dataset.forEach(r=>{const k='Cod.'+r.cod+' — '+r.motDesc.toUpperCase();bc[k]=(bc[k]||0)+1;});
+      const s=Object.entries(bc).sort((a,b)=>b[1]-a[1]),total=s.reduce((t,[,v])=>t+v,0)||1;
+      const topEl=document.getElementById(topId);
+      if(s.length){const p=Math.round(s[0][1]/total*100);topEl.innerHTML=`<div class="top-badge"><i class="ti ti-flame"></i>Más frecuente: <strong>${s[0][0].split(' — ')[0]}</strong> — ${p}%</div>`;}
+      else{topEl.innerHTML='';}
+      dc(chartKey);
+      if(s.length){
+        charts[chartKey]=new Chart(document.getElementById(canvasId),{type:'pie',data:{labels:s.map(([k])=>k),datasets:[{data:s.map(([,v])=>v),backgroundColor:COLORS.slice(0,s.length),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const p=Math.round(c.parsed/total*100);return c.label+': '+c.parsed+' ('+p+'%)';}}}}}});
+      }
+      document.getElementById(rankId).innerHTML=s.length?s.map(([k,v],i)=>{const p=Math.round(v/total*100);return`<div class="rank-wrap"><div class="rank-lbl"><span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:${COLORS[i]};display:inline-block"></span>${k}</span><span style="font-weight:600">${v} <span style="color:#8e8e93;font-weight:400">(${p}%)</span></span></div><div class="rank-bg"><div class="rank-fill" style="width:${p}%;background:${COLORS[i]}"></div></div></div>`;}).join(''):'<p style="font-size:13px;color:#8e8e93">Sin datos.</p>';
+    };
+    renderCodPie(data.filter(r=>MAQ_ESPECIFICAS.includes(r.maq)), 'cCodMaq', 'top-cod-maq', 'rank-cod-maq', 'codmaq');
+    renderCodPie(data.filter(r=>r.maq==='General'), 'cCodGen', 'top-cod-gen', 'rank-cod-gen', 'codgen');
+  }
+}
+
+
+// Datos históricos cargados desde planilla
+var HISTORICAL = [{"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-05", "hi": "09:30", "hf": "09:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-05", "hi": "11:30", "hf": "11:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-05", "hi": "13:15", "hf": "13:25", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-05", "hi": "14:50", "hf": "15:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-09", "hi": "09:20", "hf": "09:30", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-09", "hi": "11:45", "hf": "12:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio de hoja en gemela y cambio de corte", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-09", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-12", "hi": "11:45", "hf": "12:00", "sec": "Aserradero", "maq": "General", "cod": 4, "motDesc": "Cambio corte", "obs": "Cambio de corte", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-12", "hi": "11:45", "hf": "12:00", "sec": "Aserradero", "maq": "General", "cod": 4, "motDesc": "Cambio corte", "obs": "Cambio de corte", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-12", "hi": "11:45", "hf": "12:00", "sec": "Aserradero", "maq": "General", "cod": 4, "motDesc": "Cambio corte", "obs": "Cambio de corte", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-12", "hi": "11:45", "hf": "12:00", "sec": "Aserradero", "maq": "General", "cod": 4, "motDesc": "Cambio corte", "obs": "Cambio de corte", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-12", "hi": "11:45", "hf": "12:00", "sec": "Aserradero", "maq": "General", "cod": 4, "motDesc": "Cambio corte", "obs": "Cambio de corte", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-12", "hi": "11:45", "hf": "12:00", "sec": "Aserradero", "maq": "General", "cod": 4, "motDesc": "Cambio corte", "obs": "Cambio de corte", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-12", "hi": "11:45", "hf": "12:00", "sec": "Aserradero", "maq": "General", "cod": 4, "motDesc": "Cambio corte", "obs": "Cambio de corte", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-12", "hi": "11:45", "hf": "12:00", "sec": "Aserradero", "maq": "General", "cod": 4, "motDesc": "Cambio corte", "obs": "Cambio de corte", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-12", "hi": "11:45", "hf": "12:00", "sec": "Aserradero", "maq": "General", "cod": 4, "motDesc": "Cambio corte", "obs": "Cambio de corte", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-12", "hi": "11:45", "hf": "12:00", "sec": "Aserradero", "maq": "General", "cod": 4, "motDesc": "Cambio corte", "obs": "Cambio de corte", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-12", "hi": "11:45", "hf": "12:00", "sec": "Aserradero", "maq": "General", "cod": 4, "motDesc": "Cambio corte", "obs": "Cambio de corte", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-12", "hi": "11:45", "hf": "12:00", "sec": "Aserradero", "maq": "General", "cod": 4, "motDesc": "Cambio corte", "obs": "Cambio de corte", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-12", "hi": "11:45", "hf": "12:00", "sec": "Aserradero", "maq": "General", "cod": 4, "motDesc": "Cambio corte", "obs": "Cambio de corte", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-12", "hi": "11:45", "hf": "12:00", "sec": "Aserradero", "maq": "General", "cod": 4, "motDesc": "Cambio corte", "obs": "Cambio de corte", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-12", "hi": "09:10", "hf": "09:20", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-12", "hi": "14:10", "hf": "14:20", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-13", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-13", "hi": "13:25", "hf": "13:35", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-13", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-13", "hi": "15:40", "hf": "15:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja en gemela", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-14", "hi": "09:25", "hf": "09:35", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-14", "hi": "11:10", "hf": "11:20", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-14", "hi": "13:35", "hf": "14:05", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja gemela.", "dem": 30, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-15", "hi": "07:24", "hf": "07:40", "sec": "Aserradero", "maq": "Gemela", "cod": 2, "motDesc": "Falla eléctrica", "obs": "Problema en gemela.", "dem": 16, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-15", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-15", "hi": "10:00", "hf": "10:15", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio  hoja y taqueras en horizontal 13", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-15", "hi": "10:30", "hf": "10:50", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 20, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-15", "hi": "14:30", "hf": "14:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-15", "hi": "15:30", "hf": "15:40", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja en h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-16", "hi": "08:45", "hf": "09:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja gemela.", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-16", "hi": "10:40", "hf": "10:50", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-16", "hi": "13:25", "hf": "13:35", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-16", "hi": "14:30", "hf": "14:40", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-19", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-19", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-20", "hi": "09:30", "hf": "09:45", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-20", "hi": "10:00", "hf": "10:10", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-20", "hi": "10:30", "hf": "12:30", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja en h 13", "dem": 120, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-20", "hi": "14:20", "hf": "14:35", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja gemela.", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-21", "hi": "07:30", "hf": "07:40", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-21", "hi": "07:55", "hf": "08:05", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-21", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-21", "hi": "10:40", "hf": "10:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-21", "hi": "13:25", "hf": "13:35", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-21", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-21", "hi": "15:30", "hf": "15:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 20, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-22", "hi": "09:00", "hf": "09:10", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-22", "hi": "10:00", "hf": "10:10", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-22", "hi": "11:20", "hf": "11:30", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-22", "hi": "13:10", "hf": "13:20", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-22", "hi": "14:50", "hf": "15:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-22", "hi": "16:00", "hf": "16:10", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-23", "hi": "09:25", "hf": "09:45", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja en h 13", "dem": 20, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-23", "hi": "10:25", "hf": "10:35", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-26", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-26", "hi": "13:45", "hf": "13:55", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-26", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-27", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-27", "hi": "10:25", "hf": "10:35", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-27", "hi": "15:33", "hf": "15:45", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 12, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-28", "hi": "08:30", "hf": "08:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja en en el volante 1 de gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-28", "hi": "08:45", "hf": "08:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 5, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-28", "hi": "10:00", "hf": "10:10", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-28", "hi": "10:25", "hf": "10:40", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio  hoja y taqueras en horizontal 13", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-28", "hi": "13:30", "hf": "13:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-28", "hi": "15:10", "hf": "15:20", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-29", "hi": "07:20", "hf": "07:30", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-29", "hi": "08:55", "hf": "09:30", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja en horizontal 24", "dem": 35, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-29", "hi": "10:00", "hf": "10:10", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-29", "hi": "13:20", "hf": "13:30", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-29", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-30", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-01-30", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-02", "hi": "08:30", "hf": "08:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-02", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-02", "hi": "10:55", "hf": "11:10", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja y taqueras en horizontal 24", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-02", "hi": "12:35", "hf": "12:45", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-02", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-02", "hi": "07:40", "hf": "08:00", "sec": "Aserradero", "maq": "Chipera", "cod": 10, "motDesc": "Falla chipera", "obs": "Chispera atorada", "dem": 20, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-03", "hi": "08:00", "hf": "08:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja del volante 2 gemela/ no funciona bomba de agua", "dem": 40, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-03", "hi": "10:30", "hf": "10:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-03", "hi": "11:50", "hf": "12:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja de volante 2 gemela", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-03", "hi": "14:35", "hf": "14:45", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-04", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-04", "hi": "09:50", "hf": "10:15", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja en gemela.", "dem": 25, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-04", "hi": "10:20", "hf": "10:30", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-04", "hi": "11:25", "hf": "11:35", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja en h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-04", "hi": "13:15", "hf": "13:25", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-04", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-05", "hi": "09:30", "hf": "09:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-05", "hi": "09:55", "hf": "10:05", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-05", "hi": "11:30", "hf": "11:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-05", "hi": "12:50", "hf": "13:00", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-05", "hi": "13:00", "hf": "13:10", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-06", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-06", "hi": "11:40", "hf": "11:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-06", "hi": "13:00", "hf": "13:10", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-06", "hi": "13:50", "hf": "14:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-06", "hi": "14:50", "hf": "15:00", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-09", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-09", "hi": "11:40", "hf": "11:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-09", "hi": "15:00", "hf": "15:10", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-10", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-10", "hi": "11:00", "hf": "11:10", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-11", "hi": "09:50", "hf": "10:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-11", "hi": "14:35", "hf": "14:45", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio de hoja en gemela por grieta en la cierra", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-11", "hi": "15:25", "hf": "15:35", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio de hoja en gemela por raya en la costanera", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-11", "hi": "15:45", "hf": "16:00", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-12", "hi": "08:50", "hf": "09:00", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-12", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-12", "hi": "10:45", "hf": "10:55", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-13", "hi": "14:30", "hf": "14:40", "sec": "Aserradero", "maq": "General", "cod": 3, "motDesc": "Falta madera", "obs": "Cargadero sin vigas", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-13", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-13", "hi": "13:00", "hf": "13:40", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja en h 13", "dem": 40, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-13", "hi": "13:30", "hf": "13:40", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Problema h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-18", "hi": "08:20", "hf": "08:30", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-18", "hi": "09:45", "hf": "09:55", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-18", "hi": "14:50", "hf": "15:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-19", "hi": "09:35", "hf": "09:45", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-19", "hi": "13:30", "hf": "13:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-19", "hi": "15:35", "hf": "15:45", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-19", "hi": "10:30", "hf": "10:40", "sec": "Aserradero", "maq": "Chipera", "cod": 16, "motDesc": "Descabezado de vigas", "obs": "Descabezada de viga", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-20", "hi": "09:30", "hf": "09:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-20", "hi": "10:50", "hf": "11:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-20", "hi": "11:40", "hf": "11:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-20", "hi": "13:00", "hf": "13:15", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja y taqueras en horizontal 24", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-20", "hi": "14:15", "hf": "14:25", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-20", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Chipera", "cod": 10, "motDesc": "Falla chipera", "obs": "mesa de horizontal 24 llena", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-20", "hi": "09:50", "hf": "09:55", "sec": "Aserradero", "maq": "H13", "cod": 16, "motDesc": "Descabezado de vigas", "obs": "Descabezada de vigas en horizontal 13", "dem": 5, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-23", "hi": "08:00", "hf": "08:20", "sec": "Aserradero", "maq": "General", "cod": 3, "motDesc": "Falta madera", "obs": "Cargadero sin vigas", "dem": 20, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-23", "hi": "09:30", "hf": "09:45", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-23", "hi": "11:40", "hf": "11:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-23", "hi": "15:00", "hf": "15:10", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-23", "hi": "15:40", "hf": "15:55", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-23", "hi": "13:40", "hf": "13:50", "sec": "Aserradero", "maq": "Chipera", "cod": 10, "motDesc": "Falla chipera", "obs": "problema en chispera atorada", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-23", "hi": "11:10", "hf": "11:20", "sec": "Aserradero", "maq": "H13", "cod": 16, "motDesc": "Descabezado de vigas", "obs": "Descabezada de vigas", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-24", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-24", "hi": "11:25", "hf": "11:45", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio de hoja en gemela / falla en chispera", "dem": 20, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-24", "hi": "14:50", "hf": "15:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-25", "hi": "09:35", "hf": "09:45", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-25", "hi": "10:15", "hf": "10:25", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-25", "hi": "11:40", "hf": "11:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-25", "hi": "14:35", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-26", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-26", "hi": "14:50", "hf": "15:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-27", "hi": "09:50", "hf": "10:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-27", "hi": "11:00", "hf": "11:10", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-27", "hi": "11:45", "hf": "11:55", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-27", "hi": "14:00", "hf": "14:10", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-27", "hi": "13:05", "hf": "13:20", "sec": "Aserradero", "maq": "Chipera", "cod": 10, "motDesc": "Falla chipera", "obs": "Banda larga trancada", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-02-27", "hi": "10:40", "hf": "10:50", "sec": "Aserradero", "maq": "H13", "cod": 16, "motDesc": "Descabezado de vigas", "obs": "Descabezado de vigas", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-02", "hi": "07:40", "hf": "07:50", "sec": "Aserradero", "maq": "Gemela", "cod": 2, "motDesc": "Falla eléctrica", "obs": "Falla eléctrica en gemela", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-02", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-02", "hi": "14:00", "hf": "14:25", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 25, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-03", "hi": "08:50", "hf": "09:10", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 20, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-03", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-03", "hi": "09:50", "hf": "10:00", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-03", "hi": "10:05", "hf": "10:15", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-03", "hi": "10:35", "hf": "10:45", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-03", "hi": "12:35", "hf": "12:45", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-03", "hi": "12:50", "hf": "13:20", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 30, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-04", "hi": "07:20", "hf": "07:30", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-04", "hi": "07:55", "hf": "08:05", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-04", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-04", "hi": "10:45", "hf": "10:55", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-04", "hi": "12:45", "hf": "13:15", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 30, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-04", "hi": "15:00", "hf": "15:10", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-05", "hi": "07:15", "hf": "07:25", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-05", "hi": "07:27", "hf": "07:40", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 13, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-05", "hi": "10:35", "hf": "10:45", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-05", "hi": "14:00", "hf": "14:10", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-06", "hi": "07:55", "hf": "08:05", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-06", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-06", "hi": "09:55", "hf": "10:05", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-06", "hi": "13:30", "hf": "13:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-06", "hi": "13:50", "hf": "14:05", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-06", "hi": "14:35", "hf": "14:45", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-09", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-09", "hi": "10:45", "hf": "10:55", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-09", "hi": "13:55", "hf": "14:05", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-10", "hi": "10:55", "hf": "11:05", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-10", "hi": "14:20", "hf": "14:30", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-10", "hi": "14:55", "hf": "15:05", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-11", "hi": "09:35", "hf": "09:45", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-11", "hi": "14:30", "hf": "14:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-12", "hi": "07:40", "hf": "07:50", "sec": "Aserradero", "maq": "Multilamina", "cod": 2, "motDesc": "Falla eléctrica", "obs": "problema en multilamina", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-12", "hi": "09:00", "hf": "09:15", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-12", "hi": "09:45", "hf": "09:55", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-12", "hi": "14:45", "hf": "14:55", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-13", "hi": "14:35", "hf": "14:45", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-16", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-16", "hi": "10:45", "hf": "11:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio de hojas en horizontal13", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-16", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-17", "hi": "07:30", "hf": "07:40", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-17", "hi": "09:30", "hf": "09:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-17", "hi": "13:55", "hf": "14:05", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja en horizontal 24", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-17", "hi": "15:30", "hf": "15:50", "sec": "Aserradero", "maq": "Multilamina", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio disco en multilamina", "dem": 20, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-18", "hi": "09:45", "hf": "09:55", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-18", "hi": "11:00", "hf": "11:10", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-18", "hi": "11:40", "hf": "11:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó la hoja 1 de gemela", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-18", "hi": "14:00", "hf": "14:10", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-18", "hi": "14:50", "hf": "15:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-19", "hi": "08:05", "hf": "08:15", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-19", "hi": "09:35", "hf": "09:45", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-19", "hi": "14:45", "hf": "14:55", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-20", "hi": "07:50", "hf": "08:00", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-20", "hi": "08:15", "hf": "08:25", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-20", "hi": "09:50", "hf": "10:15", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja en h 13", "dem": 25, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-20", "hi": "11:45", "hf": "11:55", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-20", "hi": "13:00", "hf": "13:10", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-20", "hi": "14:50", "hf": "15:00", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-23", "hi": "07:40", "hf": "07:50", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-23", "hi": "09:40", "hf": "09:55", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-23", "hi": "13:15", "hf": "13:25", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-23", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-24", "hi": "09:30", "hf": "09:40", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-24", "hi": "11:30", "hf": "11:40", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio de hoja en general", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-24", "hi": "14:30", "hf": "14:40", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio de hoja en general", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-25", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-25", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio de hoja en horizontales y gemela", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-26", "hi": "07:50", "hf": "08:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-26", "hi": "09:35", "hf": "09:45", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-26", "hi": "10:55", "hf": "11:05", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-26", "hi": "13:30", "hf": "13:40", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-26", "hi": "14:30", "hf": "14:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-26", "hi": "15:10", "hf": "15:20", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-30", "hi": "09:50", "hf": "10:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-30", "hi": "11:10", "hf": "11:20", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-30", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-31", "hi": "08:10", "hf": "08:20", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-31", "hi": "09:35", "hf": "09:45", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-03-31", "hi": "14:30", "hf": "14:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-06", "hi": "08:50", "hf": "09:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-06", "hi": "14:30", "hf": "14:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-07", "hi": "07:30", "hf": "07:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-07", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-07", "hi": "11:45", "hf": "11:55", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "cambio de hoja gemela h13 y h24", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-07", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-07", "hi": "15:25", "hf": "15:35", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-08", "hi": "09:50", "hf": "10:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-08", "hi": "15:00", "hf": "15:25", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja en h 13", "dem": 25, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-09", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-09", "hi": "11:30", "hf": "11:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-09", "hi": "14:40", "hf": "14:40", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 5, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-09", "hi": "07:20", "hf": "07:30", "sec": "Aserradero", "maq": "Chipera", "cod": 10, "motDesc": "Falla chipera", "obs": "banda larga atorada", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-10", "hi": "09:30", "hf": "09:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-10", "hi": "12:55", "hf": "13:05", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-10", "hi": "14:35", "hf": "14:45", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-13", "hi": "08:30", "hf": "08:40", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja 2 h24", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-13", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-13", "hi": "12:40", "hf": "12:50", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-13", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-14", "hi": "11:10", "hf": "11:20", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-14", "hi": "13:35", "hf": "13:45", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio de hoja en h25", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-14", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-14", "hi": "16:10", "hf": "16:20", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-14", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Chipera", "cod": 10, "motDesc": "Falla chipera", "obs": "banda larga atorada", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-15", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-15", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-15", "hi": "15:45", "hf": "15:55", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-16", "hi": "12:30", "hf": "12:45", "sec": "Aserradero", "maq": "Multilamina", "cod": 1, "motDesc": "Falla mecánica", "obs": "Problema en multilamina", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-16", "hi": "08:10", "hf": "08:20", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-16", "hi": "09:35", "hf": "09:45", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-16", "hi": "14:20", "hf": "14:30", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-17", "hi": "08:15", "hf": "08:25", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-17", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-17", "hi": "12:45", "hf": "12:55", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-17", "hi": "14:30", "hf": "14:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-20", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-20", "hi": "12:50", "hf": "13:00", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-20", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-21", "hi": "09:00", "hf": "09:10", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-21", "hi": "09:25", "hf": "09:35", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-21", "hi": "10:50", "hf": "11:00", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-21", "hi": "11:30", "hf": "11:45", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio de hoja h 24 y taqueras", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-21", "hi": "13:30", "hf": "13:40", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-21", "hi": "13:45", "hf": "13:55", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-22", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-22", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-23", "hi": "09:15", "hf": "09:25", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-23", "hi": "12:00", "hf": "14:10", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 130, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-24", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-24", "hi": "11:30", "hf": "11:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-24", "hi": "14:25", "hf": "14:35", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja en h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-27", "hi": "09:15", "hf": "09:25", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-27", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-28", "hi": "08:20", "hf": "08:30", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-28", "hi": "08:40", "hf": "08:50", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-28", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-28", "hi": "10:00", "hf": "10:20", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 20, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-28", "hi": "11:05", "hf": "11:20", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-28", "hi": "13:00", "hf": "13:10", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-28", "hi": "14:35", "hf": "14:45", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-29", "hi": "07:50", "hf": "08:00", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-29", "hi": "09:15", "hf": "09:35", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja gemela", "dem": 20, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-04-29", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-04", "hi": "11:00", "hf": "11:15", "sec": "Aserradero", "maq": "Multilamina", "cod": 1, "motDesc": "Falla mecánica", "obs": "Problema en multilamina", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-04", "hi": "09:50", "hf": "10:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-04", "hi": "12:40", "hf": "12:50", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-04", "hi": "13:30", "hf": "13:40", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-04", "hi": "14:50", "hf": "15:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-04", "hi": "15:20", "hf": "15:30", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-04", "hi": "07:20", "hf": "07:30", "sec": "Aserradero", "maq": "Chipera", "cod": 10, "motDesc": "Falla chipera", "obs": "Chispera atorada", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-05", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-05", "hi": "12:40", "hf": "12:50", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-05", "hi": "13:30", "hf": "13:45", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-05", "hi": "14:10", "hf": "14:20", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-05", "hi": "14:25", "hf": "14:35", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-05", "hi": "15:30", "hf": "15:40", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-06", "hi": "08:05", "hf": "08:15", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-06", "hi": "10:00", "hf": "10:10", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-06", "hi": "10:30", "hf": "10:40", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-06", "hi": "11:45", "hf": "11:55", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-06", "hi": "12:35", "hf": "12:45", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-06", "hi": "14:30", "hf": "14:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-07", "hi": "07:25", "hf": "08:15", "sec": "Aserradero", "maq": "H24", "cod": 1, "motDesc": "Falla mecánica", "obs": "Problema h 24.", "dem": 50, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-07", "hi": "09:45", "hf": "09:55", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-07", "hi": "10:35", "hf": "10:45", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-07", "hi": "12:50", "hf": "13:00", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-07", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-07", "hi": "15:10", "hf": "15:20", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-07", "hi": "15:40", "hf": "15:50", "sec": "Aserradero", "maq": "H24", "cod": 16, "motDesc": "Descabezado de vigas", "obs": "Descabezada de costanero h13 h 24", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-07", "hi": "16:00", "hf": "16:20", "sec": "Aserradero", "maq": "H24", "cod": 16, "motDesc": "Descabezado de vigas", "obs": "Descabezada de costanero", "dem": 20, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-08", "hi": "09:50", "hf": "10:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-08", "hi": "12:20", "hf": "11:30", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja h 24", "dem": 5, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-08", "hi": "13:45", "hf": "13:55", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-08", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-08", "hi": "07:30", "hf": "08:35", "sec": "Aserradero", "maq": "Chipera", "cod": 10, "motDesc": "Falla chipera", "obs": "Problema en chispera", "dem": 65, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-08", "hi": "13:30", "hf": "13:55", "sec": "Aserradero", "maq": "H24", "cod": 16, "motDesc": "Descabezado de vigas", "obs": "Descortezado de viga", "dem": 25, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-11", "hi": "08:55", "hf": "09:05", "sec": "Aserradero", "maq": "H24", "cod": 1, "motDesc": "Falla mecánica", "obs": "Problema h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-11", "hi": "07:35", "hf": "07:05", "sec": "Aserradero", "maq": "General", "cod": 3, "motDesc": "Falta madera", "obs": "Sin vigas", "dem": 5, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-11", "hi": "09:50", "hf": "10:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-11", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-11", "hi": "15:00", "hf": "15:10", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-11", "hi": "07:15", "hf": "07:20", "sec": "Aserradero", "maq": "H13", "cod": 16, "motDesc": "Descabezado de vigas", "obs": "Descabezado de vigas", "dem": 5, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-11", "hi": "12:30", "hf": "12:50", "sec": "Aserradero", "maq": "H13", "cod": 16, "motDesc": "Descabezado de vigas", "obs": "Descabezado y trancado viga", "dem": 20, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-12", "hi": "09:50", "hf": "10:00", "sec": "Aserradero", "maq": "H13", "cod": 1, "motDesc": "Falla mecánica", "obs": "Problema h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-12", "hi": "09:30", "hf": "09:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-13", "hi": "09:05", "hf": "09:30", "sec": "Aserradero", "maq": "H24", "cod": 1, "motDesc": "Falla mecánica", "obs": "Problema mecánico en h 24", "dem": 25, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-13", "hi": "07:30", "hf": "07:40", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-13", "hi": "08:55", "hf": "09:05", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-13", "hi": "09:45", "hf": "09:55", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-13", "hi": "14:30", "hf": "14:40", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-14", "hi": "08:55", "hf": "09:05", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-14", "hi": "09:25", "hf": "09:35", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-14", "hi": "10:35", "hf": "10:45", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-14", "hi": "11:25", "hf": "11:35", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Reventó hoja 2 gemela", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-14", "hi": "12:40", "hf": "12:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-14", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-14", "hi": "14:55", "hf": "15:01", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 6, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-14", "hi": "09:25", "hf": "09:35", "sec": "Aserradero", "maq": "H24", "cod": 16, "motDesc": "Descabezado de vigas", "obs": "Descabezado de vigas", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-15", "hi": "08:05", "hf": "08:15", "sec": "Aserradero", "maq": "Chipera", "cod": 1, "motDesc": "Falla mecánica", "obs": "Problema chispera", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-15", "hi": "09:05", "hf": "09:15", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-15", "hi": "09:45", "hf": "09:55", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-15", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-18", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Problema en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-18", "hi": "14:10", "hf": "14:20", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Problema en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-18", "hi": "07:55", "hf": "08:05", "sec": "Aserradero", "maq": "Chipera", "cod": 10, "motDesc": "Falla chipera", "obs": "Bomba larga atorada", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-19", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Problema en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-19", "hi": "14:10", "hf": "14:20", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-19", "hi": "14:50", "hf": "15:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-20", "hi": "09:40", "hf": "09:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-20", "hi": "10:05", "hf": "10:15", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-20", "hi": "13:30", "hf": "13:40", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-20", "hi": "14:35", "hf": "14:45", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-21", "hi": "09:35", "hf": "09:45", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-21", "hi": "12:45", "hf": "12:55", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-21", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-21", "hi": "09:30", "hf": "09:35", "sec": "Aserradero", "maq": "H24", "cod": 16, "motDesc": "Descabezado de vigas", "obs": "Descabezado de vigas", "dem": 5, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-22", "hi": "10:40", "hf": "10:50", "sec": "Aserradero", "maq": "H24", "cod": 1, "motDesc": "Falla mecánica", "obs": "Problema cadena costanero h 24", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-22", "hi": "11:40", "hf": "12:00", "sec": "Aserradero", "maq": "H24", "cod": 1, "motDesc": "Falla mecánica", "obs": "Problema cadena costanero h 24", "dem": 20, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-22", "hi": "12:30", "hf": "14:33", "sec": "Aserradero", "maq": "H24", "cod": 1, "motDesc": "Falla mecánica", "obs": "Problema cadena costanero h 25", "dem": 123, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-22", "hi": "08:20", "hf": "08:30", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-22", "hi": "09:20", "hf": "09:30", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-22", "hi": "09:50", "hf": "10:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-22", "hi": "11:00", "hf": "11:10", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-22", "hi": "15:10", "hf": "15:20", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-25", "hi": "09:30", "hf": "09:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-25", "hi": "13:40", "hf": "13:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Revento liga 2 gemela", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-25", "hi": "15:15", "hf": "13:25", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio de hoja h 24", "dem": 5, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-25", "hi": "15:25", "hf": "15:35", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Revento hoja h 24", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-26", "hi": "10:05", "hf": "10:15", "sec": "Aserradero", "maq": "Gemela", "cod": 2, "motDesc": "Falla eléctrica", "obs": "Falla electrica  gemela", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-26", "hi": "12:40", "hf": "12:40", "sec": "Aserradero", "maq": "Gemela", "cod": 2, "motDesc": "Falla eléctrica", "obs": "Falla electrica  gemela", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-26", "hi": "07:00", "hf": "09:45", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 165, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-26", "hi": "09:50", "hf": "10:00", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-26", "hi": "11:00", "hf": "11:10", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-28", "hi": "08:35", "hf": "08:45", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-28", "hi": "09:50", "hf": "10:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-28", "hi": "14:35", "hf": "14:45", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-28", "hi": "14:50", "hf": "15:00", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-29", "hi": "16:10", "hf": "16:30", "sec": "Aserradero", "maq": "Chipera", "cod": 1, "motDesc": "Falla mecánica", "obs": "Rotura en chispero", "dem": 20, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-29", "hi": "07:30", "hf": "07:40", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-29", "hi": "09:50", "hf": "10:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-29", "hi": "14:00", "hf": "14:10", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-29", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-05-29", "hi": "15:10", "hf": "15:20", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-06-01", "hi": "08:40", "hf": "08:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-06-01", "hi": "09:00", "hf": "09:10", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-06-02", "hi": "07:20", "hf": "07:30", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-06-02", "hi": "09:50", "hf": "10:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-06-02", "hi": "14:40", "hf": "14:55", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Revento hoja 1 gemela", "dem": 15, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-06-03", "hi": "09:30", "hf": "09:40", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-06-03", "hi": "14:50", "hf": "15:00", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-06-04", "hi": "08:40", "hf": "08:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Revento hoja 1 gemela", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-06-04", "hi": "10:05", "hf": "10:15", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-06-04", "hi": "14:40", "hf": "14:50", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-06-05", "hi": "08:55", "hf": "09:05", "sec": "Aserradero", "maq": "H24", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 24.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-06-05", "hi": "09:20", "hf": "09:30", "sec": "Aserradero", "maq": "H13", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja h 13", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-06-05", "hi": "12:55", "hf": "13:05", "sec": "Aserradero", "maq": "Gemela", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio hoja en gemela.", "dem": 10, "foto": null}, {"op": "922", "nom": "Ariel Dimitroff", "fecha": "2026-06-05", "hi": "14:25", "hf": "14:40", "sec": "Aserradero", "maq": "Multilamina", "cod": 9, "motDesc": "Cambio de hoja", "obs": "Cambio de disco multilamina", "dem": 15, "foto": null}];
+
+
+// ── Export period state ────────────────────────────────────────────
+let expPeriodo = 'hoy';
+
+function setExpPer(mode, btn){
+  expPeriodo = mode;
+  document.querySelectorAll('.exp-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const now = new Date(), fmt = d => d.toISOString().split('T')[0];
+  if(mode==='hoy'){
+    document.getElementById('exp-desde').value = fmt(now);
+    document.getElementById('exp-hasta').value = fmt(now);
+  } else if(mode==='semana'){
+    const w=new Date(now); w.setDate(now.getDate()-7);
+    document.getElementById('exp-desde').value = fmt(w);
+    document.getElementById('exp-hasta').value = fmt(now);
+  } else if(mode==='mes'){
+    const m=new Date(now.getFullYear(),now.getMonth(),1);
+    document.getElementById('exp-desde').value = fmt(m);
+    document.getElementById('exp-hasta').value = fmt(now);
+  } else if(mode==='anual'){
+    const y=new Date(now.getFullYear(),0,1);
+    document.getElementById('exp-desde').value = fmt(y);
+    document.getElementById('exp-hasta').value = fmt(now);
+  } else if(mode==='todo'){
+    document.getElementById('exp-desde').value = '';
+    document.getElementById('exp-hasta').value = '';
+  }
+  updExpPreview();
+}
+
+function getExpData(){
+  const desde = document.getElementById('exp-desde').value;
+  const hasta = document.getElementById('exp-hasta').value;
+  return registros.filter(r=>{
+    let ok = true;
+    if(desde && r.fecha < desde) ok = false;
+    if(hasta && r.fecha > hasta) ok = false;
+    return ok;
+  }).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+}
+
+function updExpPreview(){
+  const data = getExpData();
+  const el = document.getElementById('exp-preview');
+  if(el) el.textContent = data.length > 0
+    ? data.length + ' registros listos para exportar'
+    : 'Sin registros en este período';
+}
+
+function exportarExcel(){
+  const data = getExpData();
+  if(!data.length){ alert('No hay registros en el período seleccionado.'); return; }
+
+  // sep=; indica a Excel que use punto y coma como separador
+  const BOM = '\uFEFF';
+  const SEP = ';';
+
+  const headers = [
+    'Fecha',
+    'N Operario',
+    'Nombre Operario',
+    'Sector',
+    'Maquina',
+    'Codigo Falla',
+    'Descripcion Falla',
+    'Hora Inicio',
+    'Hora Fin',
+    'Demora min',
+    'Observaciones'
+  ];
+
+  const rows = data.map(r => [
+    r.fecha        || '',
+    r.op           || '',
+    r.nom          || '',
+    r.sec          || '',
+    r.maq          || '',
+    r.cod          || '',
+    (r.motDesc     || '').replace(/;/g,' -'),
+    r.hi           || '',
+    r.hf           || '',
+    r.dem          || 0,
+    (r.obs         || '').replace(/;/g,' -').replace(/\n/g,' ')
+  ]);
+
+  // "sep=;" en primera linea indica a Excel el separador
+  const content = BOM + 'sep=;\r\n' +
+    [headers, ...rows]
+      .map(row => row.map(v => String(v)).join(SEP))
+      .join('\r\n');
+
+  const desde = document.getElementById('exp-desde').value;
+  const hasta = document.getElementById('exp-hasta').value;
+  let fname = 'FCB_Reportes';
+  if(desde && hasta && desde===hasta) fname += '_' + desde;
+  else if(desde && hasta) fname += '_' + desde + '_al_' + hasta;
+  else if(expPeriodo!=='todo') fname += '_' + expPeriodo;
+  fname += '.csv';
+
+  const blob = new Blob([content], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function loadLocal(){
+  // Cargar datos históricos (siempre presentes), con _order bajo para que queden al final
+  registros = HISTORICAL.map((r,i)=>({...r,ts:new Date(r.fecha),_order:i}));
+}
+
+// Escucha en tiempo real los reportes guardados en Firestore (compartidos entre todos los dispositivos)
+function initFirestoreSync(){
+  db.collection('reportes').orderBy('fecha').onSnapshot(snapshot=>{
+    const remotos = snapshot.docs.map(doc=>{
+      const d = doc.data();
+      const order = d.creado && d.creado.toMillis ? d.creado.toMillis() : Date.now();
+      return {...d, ts: d.fecha ? new Date(d.fecha) : new Date(), _id: doc.id, _order: order};
+    });
+    registros = [...HISTORICAL.map((r,i)=>({...r,ts:new Date(r.fecha),_order:i})), ...remotos];
+    updPortada();
+    if(document.getElementById('page-historial').classList.contains('active')) renderHist();
+    if(document.getElementById('page-reportes').classList.contains('active')) renderRep(periodo);
+  }, err=>{
+    console.error('Error al sincronizar con Firestore:', err);
+  });
+}
+
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+
+buildSelects();
+autoFechaHora(true);
+buildDatalist();
+checkSession();
+buildMaqPills(allMaq());
+loadLocal();
+initFirestoreSync();
+updPortada();
+// Init historial date range to "todo" by default so data is visible
+(function(){
+  document.getElementById('f-desde').value = '';
+  document.getElementById('f-hasta').value = '';
+  currentQuick = 'todo';
+  const tb = document.getElementById('qb-todo');
+  if(tb){ document.querySelectorAll('.qbtn').forEach(b=>b.classList.remove('active')); tb.classList.add('active'); }
+})();
+</script>
+</body>
+</html>
