@@ -185,6 +185,12 @@ textarea{resize:none;line-height:1.5}
   </div>
   <div class="cover-date-bar"><i class="ti ti-calendar" style="color:#E8520A;font-size:16px"></i><span id="cover-date"></span></div>
   <div class="page-inner">
+    <div id="venc-banner" style="display:none;background:#fef2f2;border:1.5px solid #fecaca;border-radius:14px;padding:12px 14px;margin-bottom:12px;cursor:pointer;align-items:center;gap:10px" onclick="goTo('admin');setTimeout(()=>{const c=document.getElementById('venc-card');if(c)c.scrollIntoView({behavior:'smooth'});},150)">
+      <i class="ti ti-alert-triangle" style="color:#dc2626;font-size:22px"></i>
+      <div style="flex:1"><div id="venc-banner-txt" style="font-size:13.5px;font-weight:700;color:#991b1b"></div>
+      <div style="font-size:12px;color:#b91c1c">Tocá para ver el detalle en el panel de administrador</div></div>
+      <i class="ti ti-chevron-right" style="color:#dc2626"></i>
+    </div>
     <div class="stat-grid admin-stats" id="portada-stats"></div>
     <div class="card">
       <div class="card-title"><i class="ti ti-bolt"></i>Acceso rápido</div>
@@ -375,6 +381,60 @@ textarea{resize:none;line-height:1.5}
 <div class="page" id="page-admin">
   <div class="page-inner">
     <div style="margin-bottom:10px"><span class="role-badge badge-admin" style="font-size:12px;padding:4px 12px"><i class="ti ti-shield" style="font-size:12px;margin-right:3px"></i>Panel de administrador</span></div>
+
+    <!-- ══ VENCIMIENTOS Y MANTENIMIENTOS (v27) ══ -->
+    <div class="card" id="venc-card">
+      <div class="admin-sec-title" style="color:#b45309"><i class="ti ti-bell" style="margin-right:5px;font-size:13px"></i>Vencimientos y mantenimientos</div>
+      <div id="venc-resumen" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+      <div id="venc-lista"></div>
+      <div id="venc-vacio" style="display:none;font-size:13px;color:#636366;padding:8px 0">Todavía no hay vencimientos cargados.
+        <button onclick="seedVenc()" style="margin-top:8px;width:100%;padding:11px;background:#1F3864;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Cargar los ítems iniciales de la planilla (16)</button>
+      </div>
+      <div class="sep"></div>
+      <button id="venc-btn-nuevo" onclick="vencNuevo()" style="width:100%;padding:12px;background:#b45309;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px"><i class="ti ti-plus"></i>Agregar vencimiento</button>
+
+      <!-- formulario alta/edición -->
+      <div id="venc-form" style="display:none;margin-top:12px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px">
+        <div id="venc-form-title" style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:10px">Nuevo vencimiento</div>
+        <label>Ítem / Equipo</label>
+        <input type="text" id="vf-item" placeholder="Ej: Caldera - Inspección Anual / DJ (URSEA)"/>
+        <label>Central (prioridad)</label>
+        <select id="vf-central">
+          <option value="1">1 - Central Eléctrica</option>
+          <option value="2">2 - Central de Vapor</option>
+          <option value="3">3 - Central de Incendio</option>
+          <option value="4">4 - Central Neumática</option>
+        </select>
+        <label>Tipo</label>
+        <select id="vf-tipo"><option>Vencimiento</option><option>Mantenimiento preventivo</option></select>
+        <label>Fecha de vencimiento</label>
+        <input type="date" id="vf-fecha"/>
+        <label>Frecuencia</label>
+        <input type="text" id="vf-frec" placeholder="Anual, Semestral, Cada 5 años..."/>
+        <label>Días de aviso (separados por coma)</label>
+        <input type="text" id="vf-dias" placeholder="30,15,7"/>
+        <div style="display:flex;gap:6px;margin:2px 0 10px">
+          <button type="button" class="exp-btn" onclick="document.getElementById('vf-dias').value='30,15,7'">Normal 30·15·7</button>
+          <button type="button" class="exp-btn" onclick="document.getElementById('vf-dias').value='60,45,30,15,7'">Prioritario 60→7</button>
+          <button type="button" class="exp-btn" onclick="document.getElementById('vf-dias').value='90,60,30,15,7'">Complejo 90→7</button>
+        </div>
+        <label>Requisitos a recaudar</label>
+        <textarea id="vf-req" rows="3" placeholder="Documentos, certificados, muestras..."></textarea>
+        <label>¿Declaración jurada?</label>
+        <select id="vf-dj"><option>No</option><option>Sí</option></select>
+        <label>Con quién hablar / Contacto</label>
+        <input type="text" id="vf-contacto" placeholder="Ej: Ing. Luis Chocho"/>
+        <label>Notas</label>
+        <textarea id="vf-notas" rows="2"></textarea>
+        <p id="vf-err" style="font-size:12px;color:#dc2626;display:none;margin-bottom:6px">Completá al menos el ítem y la fecha.</p>
+        <div style="display:flex;gap:8px">
+          <button onclick="vencGuardar()" style="flex:1;padding:12px;background:#15803d;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer"><i class="ti ti-check"></i> Guardar</button>
+          <button onclick="vencCancelar()" style="flex:1;padding:12px;background:#e5e5ea;color:#3a3a3c;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Cancelar</button>
+        </div>
+      </div>
+      <button id="venc-btn-notif" onclick="vencPedirPermiso()" style="display:none;width:100%;margin-top:10px;padding:10px;background:#fff;color:#1F3864;border:1.5px solid #1F3864;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer"><i class="ti ti-bell-ringing"></i> Activar avisos en este dispositivo</button>
+    </div>
+
 
     <!-- EXPORTAR EXCEL -->
     <div class="card">
@@ -1587,6 +1647,173 @@ function initFirestoreSync(){
     console.error('Error al sincronizar con Firestore:', err);
   });
 }
+
+
+// ═══════════════════════════════════════════════════════════════════
+// MÓDULO VENCIMIENTOS Y MANTENIMIENTOS (v27) — solo administrador
+// ═══════════════════════════════════════════════════════════════════
+let vencData = [];
+const VENC_CENTRALES = {1:'Central Eléctrica',2:'Central de Vapor',3:'Central de Incendio',4:'Central Neumática'};
+const VENC_COLORES = {1:'#b45309',2:'#c2410c',3:'#dc2626',4:'#1d4ed8'};
+
+function initVencSync(){
+  db.collection('vencimientos').onSnapshot(s=>{
+    vencData = s.docs.map(d=>({id:d.id, ...d.data()}));
+    renderVenc(); checkAlertasVenc();
+  }, err=>console.error('vencimientos sync:', err));
+}
+
+function vencDiasRest(fecha){
+  if(!fecha) return null;
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  return Math.round((new Date(fecha+'T00:00:00') - hoy)/86400000);
+}
+function vencEstado(d, dias){
+  const maxAviso = (dias&&dias.length)?Math.max(...dias):30;
+  if(d===null) return {c:'#8e8e93', t:'sin fecha'};
+  if(d<0)  return {c:'#7f1d1d', t:'VENCIDO hace '+(-d)+' d'};
+  if(d===0)return {c:'#dc2626', t:'VENCE HOY'};
+  if(d<=7) return {c:'#dc2626', t:'faltan '+d+' días'};
+  if(d<=maxAviso) return {c:'#d97706', t:'faltan '+d+' días'};
+  return {c:'#15803d', t:'faltan '+d+' días'};
+}
+function vencFmt(f){ if(!f)return '—'; const p=f.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+
+function renderVenc(){
+  const lista=document.getElementById('venc-lista'); if(!lista) return;
+  const vacio=document.getElementById('venc-vacio');
+  const res=document.getElementById('venc-resumen');
+  const bn=document.getElementById('venc-btn-notif');
+  if(bn) bn.style.display = ('Notification' in window && Notification.permission==='default') ? 'block':'none';
+  if(!vencData.length){ lista.innerHTML=''; res.innerHTML=''; vacio.style.display='block'; return; }
+  vacio.style.display='none';
+  const orden=[...vencData].sort((a,b)=>(a.fecha||'9999').localeCompare(b.fecha||'9999'));
+  let nVenc=0,nRojo=0,nAmar=0;
+  orden.forEach(v=>{const d=vencDiasRest(v.fecha); if(d===null)return; if(d<0)nVenc++; else if(d<=7)nRojo++; else if(d<=((v.diasAviso&&v.diasAviso.length)?Math.max(...v.diasAviso):30))nAmar++;});
+  res.innerHTML =
+    (nVenc?'<span style="background:#7f1d1d;color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700">'+nVenc+' vencido'+(nVenc>1?'s':'')+'</span>':'')+
+    (nRojo?'<span style="background:#dc2626;color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700">'+nRojo+' ≤ 7 días</span>':'')+
+    (nAmar?'<span style="background:#d97706;color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700">'+nAmar+' en ventana de aviso</span>':'')+
+    ((!nVenc&&!nRojo&&!nAmar)?'<span style="background:#15803d;color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700">✓ Todo al día</span>':'');
+  lista.innerHTML = orden.map(v=>{
+    const d=vencDiasRest(v.fecha), e=vencEstado(d, v.diasAviso);
+    const cc=VENC_COLORES[v.central]||'#636366';
+    return '<div style="border:1px solid #e5e5ea;border-radius:12px;padding:10px 12px;margin-bottom:8px;background:#fff">'
+      +'<div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="vencToggle(\''+v.id+'\')">'
+      +'<span style="width:12px;height:12px;border-radius:50%;background:'+e.c+';flex-shrink:0"></span>'
+      +'<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600;color:#1c1c1e;line-height:1.3">'+(v.item||'')+'</div>'
+      +'<div style="font-size:11.5px;color:'+cc+';font-weight:600">'+ (VENC_CENTRALES[v.central]||'') +(v.dj==='Sí'?' · 📝 DJ':'')+'</div></div>'
+      +'<div style="text-align:right;flex-shrink:0"><div style="font-size:12.5px;font-weight:700;color:'+e.c+'">'+e.t+'</div>'
+      +'<div style="font-size:11px;color:#8e8e93">'+vencFmt(v.fecha)+'</div></div></div>'
+      +'<div id="venc-det-'+v.id+'" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed #e5e5ea;font-size:12.5px;color:#3a3a3c;line-height:1.6">'
+      +(v.frecuencia?'<div><b>Frecuencia:</b> '+v.frecuencia+'</div>':'')
+      +'<div><b>Avisos:</b> '+((v.diasAviso||[]).join(', ')||'30, 15, 7')+' días antes</div>'
+      +(v.requisitos?'<div style="margin-top:4px"><b>📋 Requisitos:</b><br>'+v.requisitos+'</div>':'')
+      +(v.contacto?'<div style="margin-top:4px"><b>📞 Con quién hablar:</b> '+v.contacto+'</div>':'')
+      +(v.notas?'<div style="margin-top:4px"><b>🗒️ Notas:</b> '+v.notas+'</div>':'')
+      +'<div style="display:flex;gap:6px;margin-top:10px">'
+      +'<button class="exp-btn" onclick="vencEditar(\''+v.id+'\')"><i class="ti ti-edit"></i> Editar</button>'
+      +'<button class="exp-btn" onclick="vencRenovar(\''+v.id+'\')" style="color:#15803d;border-color:#15803d"><i class="ti ti-refresh"></i> Renovar</button>'
+      +'<button class="exp-btn" onclick="vencEliminar(\''+v.id+'\')" style="color:#dc2626;border-color:#dc2626"><i class="ti ti-trash"></i> Eliminar</button>'
+      +'</div></div></div>';
+  }).join('');
+}
+function vencToggle(id){ const el=document.getElementById('venc-det-'+id); if(el) el.style.display = el.style.display==='none'?'block':'none'; }
+
+let vencEditId=null;
+function vencNuevo(){ vencEditId=null; vencFormReset(); document.getElementById('venc-form-title').textContent='Nuevo vencimiento';
+  document.getElementById('venc-form').style.display='block'; document.getElementById('vf-item').focus(); }
+function vencFormReset(){ ['vf-item','vf-fecha','vf-frec','vf-req','vf-contacto','vf-notas'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('vf-central').value='1'; document.getElementById('vf-tipo').value='Vencimiento';
+  document.getElementById('vf-dj').value='No'; document.getElementById('vf-dias').value='30,15,7'; document.getElementById('vf-err').style.display='none'; }
+function vencCancelar(){ document.getElementById('venc-form').style.display='none'; vencEditId=null; }
+function vencEditar(id){ const v=vencData.find(x=>x.id===id); if(!v)return; vencEditId=id;
+  document.getElementById('vf-item').value=v.item||''; document.getElementById('vf-central').value=v.central||'1';
+  document.getElementById('vf-tipo').value=v.tipo||'Vencimiento'; document.getElementById('vf-fecha').value=v.fecha||'';
+  document.getElementById('vf-frec').value=v.frecuencia||''; document.getElementById('vf-dias').value=(v.diasAviso||[30,15,7]).join(',');
+  document.getElementById('vf-req').value=v.requisitos||''; document.getElementById('vf-dj').value=v.dj||'No';
+  document.getElementById('vf-contacto').value=v.contacto||''; document.getElementById('vf-notas').value=v.notas||'';
+  document.getElementById('venc-form-title').textContent='Editar: '+(v.item||'');
+  document.getElementById('venc-form').style.display='block';
+  document.getElementById('venc-form').scrollIntoView({behavior:'smooth'}); }
+function vencRenovar(id){ vencEditar(id); document.getElementById('vf-fecha').value='';
+  document.getElementById('venc-form-title').textContent='Renovar (ingresá la NUEVA fecha): '+((vencData.find(x=>x.id===id)||{}).item||'');
+  document.getElementById('vf-fecha').focus(); }
+function vencGuardar(){
+  const item=document.getElementById('vf-item').value.trim(), fecha=document.getElementById('vf-fecha').value;
+  if(!item||!fecha){ document.getElementById('vf-err').style.display='block'; return; }
+  const dias=document.getElementById('vf-dias').value.split(',').map(x=>parseInt(x.trim(),10)).filter(x=>x>0).sort((a,b)=>b-a);
+  const doc={ item, central: parseInt(document.getElementById('vf-central').value,10),
+    tipo: document.getElementById('vf-tipo').value, fecha,
+    frecuencia: document.getElementById('vf-frec').value.trim(),
+    diasAviso: dias.length?dias:[30,15,7],
+    requisitos: document.getElementById('vf-req').value.trim(),
+    dj: document.getElementById('vf-dj').value,
+    contacto: document.getElementById('vf-contacto').value.trim(),
+    notas: document.getElementById('vf-notas').value.trim(),
+    avisosEnviados: [], actualizado: new Date().toISOString() };
+  const op = vencEditId ? db.collection('vencimientos').doc(vencEditId).set(doc,{merge:true})
+                        : db.collection('vencimientos').add(doc);
+  op.then(()=>{ vencCancelar(); }).catch(e=>alert('Error al guardar: '+e.message));
+}
+function vencEliminar(id){ const v=vencData.find(x=>x.id===id)||{};
+  if(confirm('¿Eliminar "'+(v.item||'')+'"? Esta acción no se puede deshacer.'))
+    db.collection('vencimientos').doc(id).delete().catch(e=>alert('Error: '+e.message)); }
+
+// ── Alertas: banner en portada + notificación local ────────────────
+function vencAlertasActivas(){
+  return vencData.filter(v=>{ const d=vencDiasRest(v.fecha); if(d===null)return false;
+    const m=(v.diasAviso&&v.diasAviso.length)?Math.max(...v.diasAviso):30; return d<=m; });
+}
+function checkAlertasVenc(){
+  const b=document.getElementById('venc-banner'); if(!b)return;
+  const al=vencAlertasActivas();
+  if(isAdmin && al.length){
+    document.getElementById('venc-banner-txt').textContent='⏰ '+al.length+' vencimiento'+(al.length>1?'s':'')+' requiere'+(al.length>1?'n':'')+' atención';
+    b.style.display='flex';
+    vencNotifLocal(al);
+  } else b.style.display='none';
+}
+function vencNotifLocal(al){
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  const hoy=todayStr(); if(localStorage.getItem('fcb_venc_notif')===hoy)return;
+  const urg=[...al].sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''))[0];
+  const d=vencDiasRest(urg.fecha);
+  try{ new Notification('FCB · '+al.length+' vencimiento'+(al.length>1?'s':'')+' en ventana de aviso',
+    { body:'Más urgente: '+urg.item+' ('+(d<0?'VENCIDO':(d===0?'vence HOY':'faltan '+d+' días'))+').\nAbrí el panel de administrador para ver requisitos y contactos.',
+      icon:'icons/icon-192.png' });
+    localStorage.setItem('fcb_venc_notif',hoy);
+  }catch(e){}
+}
+function vencPedirPermiso(){ if('Notification' in window) Notification.requestPermission().then(()=>renderVenc()); }
+
+// ── Datos iniciales (planilla Control_Vencimientos_FCB) ────────────
+const VENC_SEED = [
+ {item:'SSEE - Mantenimiento Anual (MAK 31744 + URUTRANSFOR 804001)',central:1,tipo:'Mantenimiento preventivo',fecha:'2027-03-14',frecuencia:'Anual',diasAviso:[60,45,30,15,7],requisitos:'Corte programado; limpieza de celdas y transformadores; muestras de aceite para cromatografía (lab. Salto Grande); ensayo de protecciones (SEPAM, COMEM, Buchholz); revisión de baterías y cargador; lubricación de interruptores',dj:'No',contacto:'Ing. Luis Chocho',notas:'Último realizado 14/03/2026. Vigilar: goteo de aceite en tapa del MAK y arborescencia en polo de interruptor'},
+ {item:'SSEE - Reanálisis físico-químico aceite MAK 31744',central:1,tipo:'Vencimiento',fecha:'2026-09-10',frecuencia:'A los 180 días (lab.)',diasAviso:[45,30,15,7],requisitos:'Muestra de aceite de cuba; enviar a Laboratorio Salto Grande; comparar TIF con informe 26/33688',dj:'No',contacto:'Ing. Luis Chocho / Laboratorio Salto Grande',notas:'⚠️ Informe 25/03/2026: aceite CONTAMINADO, TIF 17.8 mN/m (mín. normal 28). Considerar regenerar o reemplazar'},
+ {item:'SSEE - Tensión de Paso y Contacto',central:1,tipo:'Vencimiento',fecha:'2026-09-15',frecuencia:'Anual',diasAviso:[30,15,7],requisitos:'Informe de medición firmado; plano de malla de tierra; certificado anterior',dj:'No',contacto:'Ing. Luis Chocho',notas:'FECHA DE EJEMPLO - corregir. Aprovechar visita del mantenimiento anual de SSEE'},
+ {item:'Pararrayos - Mantenimiento Anual',central:1,tipo:'Vencimiento',fecha:'2026-09-15',frecuencia:'Anual',diasAviso:[30,15,7],requisitos:'Informe de continuidad y resistencia de bajada; inspección visual de captor, bajadas, jabalinas y conexiones',dj:'No',contacto:'Ing. Luis Chocho (aprovechar visita de SSEE)',notas:'FECHA DE EJEMPLO - corregir'},
+ {item:'Análisis de Vibraciones',central:1,tipo:'Mantenimiento preventivo',fecha:'2026-10-05',frecuencia:'Anual',diasAviso:[30,15,7],requisitos:'Listado de motores/equipos rotativos; historial de mediciones; equipos en marcha durante la medición',dj:'No',contacto:'Empresa de análisis predictivo / Jefe de mantenimiento',notas:'FECHA DE EJEMPLO - corregir. Comparar tendencias con informe anterior'},
+ {item:'Análisis Termográfico I',central:1,tipo:'Mantenimiento preventivo',fecha:'2027-02-04',frecuencia:'Semestral (2 al año)',diasAviso:[30,15,7],requisitos:'Informe termográfico SKF; listado de tableros; acceso con tableros energizados y en carga',dj:'No',contacto:'SKF - Pedro Yaxaldebehere / Jefe de mantenimiento',notas:'Último realizado 04/02/2026 (anterior: 19/11/2025)'},
+ {item:'Análisis Termográfico II',central:1,tipo:'Mantenimiento preventivo',fecha:'2026-08-04',frecuencia:'Semestral (2 al año)',diasAviso:[30,15,7],requisitos:'Informe termográfico SKF; listado de tableros; acceso con tableros energizados y en carga',dj:'No',contacto:'SKF - Pedro Yaxaldebehere / Jefe de mantenimiento',notas:'Fecha estimada (6 meses después del I). Verificar que las alertas del informe 04/02/2026 estén corregidas'},
+ {item:'Termografía - Corregir ALERTAS informe 04/02/2026',central:1,tipo:'Mantenimiento preventivo',fecha:'2026-07-31',frecuencia:'Correctivo',diasAviso:[15,7,2],requisitos:'Ajustar conexiones: Doguera tablero 4.03 (entrada/salida interruptor ppal., 37→49°C y 33→45°C); Incomac tablero 2.02 (KM4 67→84°C, MT8 72→76°C, KM8 63→66°C); S/E 380V tablero 01.380 (desbalance de fases: F1 152A vs F2 366A / F3 405A, revisar banco de capacitores); tablero aux. ventiladores (54→72°C)',dj:'No',contacto:'Electricista de planta / Jefe de mantenimiento',notas:'⚠️ Todas las temperaturas AUMENTARON. Corregir antes de la Termografía II'},
+ {item:'Caldera - Inspección Anual / DJ (URSEA)',central:2,tipo:'Vencimiento',fecha:'2026-12-01',frecuencia:'Anual',diasAviso:[60,45,30,15,7],requisitos:'Declaración jurada URSEA; certificado de prueba hidráulica; informe de inspección de válvulas de seguridad; libro de caldera al día; carné de fogistas vigentes',dj:'Sí',contacto:'URSEA / Inspector habilitado / Fogista jefe',notas:'FECHA DE EJEMPLO - corregir. Caldera fría y vacía para inspección interna. Coordinar parada con Secado (afecta los 7 hornos)'},
+ {item:'Caldera - Inspección Agua (GV 5462)',central:2,tipo:'Vencimiento',fecha:'2027-06-19',frecuencia:'Anual (informe URSEA)',diasAviso:[45,30,15,7],requisitos:'Inspección visual lado de aguas por tapas hombre (caldera fría y abierta); reseña de análisis de agua de últimos 6 meses; informe firmado por ing. químico para URSEA',dj:'No',contacto:'Inqui S.R.L. - Ing. Quím. Hugo Otegui / Ing. Nicolás Gallo',notas:'Última inspección 19/06/2026: estado bueno (depósitos leves ~0,5 mm, sin corrosión). Inqui hace además análisis mensuales. Coordinar con parada anual de caldera'},
+ {item:'Válvulas de seguridad de caldera - calibración',central:2,tipo:'Vencimiento',fecha:'2026-12-01',frecuencia:'Anual',diasAviso:[45,30,15,7],requisitos:'Certificado de calibración en banco; precintado posterior',dj:'No',contacto:'Taller habilitado de calibración',notas:'FECHA DE EJEMPLO - corregir. Hacer junto con la parada de caldera para URSEA'},
+ {item:'C. Incendio - MA Bomba',central:3,tipo:'Mantenimiento preventivo',fecha:'2026-08-20',frecuencia:'Anual',diasAviso:[30,15,7],requisitos:'Prueba de caudal y presión; arranque automático y manual; estado de tanque de reserva; alternancia con bomba jockey',dj:'No',contacto:'Empresa de mantenimiento de sistema de incendio / Prevencionista',notas:'FECHA DE EJEMPLO - corregir'},
+ {item:'C. Incendio - MTR Línea',central:3,tipo:'Mantenimiento preventivo',fecha:'2026-08-20',frecuencia:'Anual',diasAviso:[30,15,7],requisitos:'Inspección de cañería, hidrantes, mangueras y lanzas; prueba de presión de la red; nichos y señalización',dj:'No',contacto:'Empresa de mantenimiento de sistema de incendio / Prevencionista',notas:'FECHA DE EJEMPLO - corregir. Aprovechar la visita del MA de bomba'},
+ {item:'C. Incendio - MA Central Detección',central:3,tipo:'Mantenimiento preventivo',fecha:'2026-08-20',frecuencia:'Anual',diasAviso:[30,15,7],requisitos:'Prueba de detectores y avisadores manuales; baterías de la central; registro de zonas y fallas',dj:'No',contacto:'Empresa de mantenimiento de sistema de detección / Prevencionista',notas:'FECHA DE EJEMPLO - corregir'},
+ {item:'Extintores - recarga y prueba hidráulica',central:3,tipo:'Vencimiento',fecha:'2026-08-20',frecuencia:'Anual',diasAviso:[30,15,7],requisitos:'Listado completo con ubicación; retiro y reposición escalonada (nunca dejar sectores sin cobertura); tarjetas de recarga',dj:'No',contacto:'Empresa recargadora habilitada / Prevencionista',notas:'FECHA DE EJEMPLO - corregir. Prueba hidráulica cada 5 años según fabricación de cada cilindro'},
+ {item:'Compresores - MA',central:4,tipo:'Mantenimiento preventivo',fecha:'2026-10-05',frecuencia:'Anual (o por horas)',diasAviso:[30,15,7],requisitos:'Cambio de filtros y aceite; revisión de válvulas; horas de marcha; secador de aire y purgas automáticas',dj:'No',contacto:'Service oficial del compresor / Mantenimiento',notas:'FECHA DE EJEMPLO - corregir'}
+];
+function seedVenc(){
+  if(vencData.length){ alert('Ya hay datos cargados.'); return; }
+  const batch=db.batch();
+  VENC_SEED.forEach(v=>{ const ref=db.collection('vencimientos').doc();
+    batch.set(ref,{...v, avisosEnviados:[], actualizado:new Date().toISOString()}); });
+  batch.commit().then(()=>alert('✓ Se cargaron '+VENC_SEED.length+' vencimientos. Revisá las fechas marcadas como EJEMPLO.')).catch(e=>alert('Error: '+e.message));
+}
+initVencSync();
 
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 
