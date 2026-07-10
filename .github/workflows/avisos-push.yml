@@ -1,0 +1,20 @@
+name: Avisos de vencimientos
+
+on:
+  schedule:
+    # 10:00 UTC = 07:00 en Uruguay (UTC-3)
+    - cron: '0 10 * * *'
+  workflow_dispatch: {}   # permite ejecutarlo a mano desde la pestaña Actions
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install firebase-admin@12
+      - run: node scripts/enviar-avisos.js
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
