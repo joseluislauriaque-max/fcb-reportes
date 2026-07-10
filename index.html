@@ -19,6 +19,7 @@
 <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overscroll-behavior:none}
@@ -1785,7 +1786,46 @@ function vencNotifLocal(al){
     localStorage.setItem('fcb_venc_notif',hoy);
   }catch(e){}
 }
-function vencPedirPermiso(){ if('Notification' in window) Notification.requestPermission().then(()=>renderVenc()); }
+const VENC_VAPID = 'BJz320ReHMsb5sgL3czRQoqMwN4ZD1uSw2JVrXUh0l4L0h2wTcruQxRtAbATORglHjhg0U0sZkilCL0MoL8_lGo';
+function vencPedirPermiso(){
+  if(!('Notification' in window)){ alert('Este navegador no soporta notificaciones.'); return; }
+  Notification.requestPermission().then(perm=>{
+    renderVenc();
+    if(perm==='granted') vencRegistrarPush();
+  });
+}
+function vencRegistrarPush(){
+  if(!firebase.messaging || !('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('firebase-messaging-sw.js')
+    .then(reg=>firebase.messaging().getToken({vapidKey:VENC_VAPID, serviceWorkerRegistration:reg}))
+    .then(token=>{
+      if(!token) return;
+      return db.collection('push_tokens').doc(token).set({
+        token, ua: navigator.userAgent.slice(0,120), fecha: new Date().toISOString()
+      }).then(()=>{
+        const hoy=todayStr();
+        if(localStorage.getItem('fcb_push_ok')!==hoy){
+          localStorage.setItem('fcb_push_ok',hoy);
+          alert('✓ Este dispositivo quedó registrado para recibir avisos push (07:00).');
+        }
+      });
+    })
+    .catch(e=>console.error('registro push:', e));
+}
+// Mensajes push con la app abierta en primer plano
+try{
+  if(firebase.messaging && firebase.messaging.isSupported && firebase.messaging.isSupported()){
+    firebase.messaging().onMessage(p=>{
+      const d=(p&&p.data)||{};
+      if('Notification' in window && Notification.permission==='granted'){
+        try{ new Notification(d.title||'FCB Vencimientos',{body:d.body||'',icon:'icons/icon-192.png'}); }catch(e){}
+      }
+    });
+  }
+}catch(e){}
+// Si ya dio permiso antes, renovar/registrar token al abrir la app (admin)
+setTimeout(()=>{ if(isAdmin && 'Notification' in window && Notification.permission==='granted') vencRegistrarPush(); }, 3000);
+
 
 // ── Datos iniciales (planilla Control_Vencimientos_FCB) ────────────
 const VENC_SEED = [
