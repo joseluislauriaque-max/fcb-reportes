@@ -1,5 +1,5 @@
 const CACHE = 'fcb-v28';
-const ASSETS = ['/', '/index.html', '/manifest.json',
+const ASSETS = ['./', './index.html', './manifest.json',
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js',
   'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js',
   'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css'];
