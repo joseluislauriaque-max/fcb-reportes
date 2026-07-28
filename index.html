@@ -1187,10 +1187,19 @@ function setRepTab(t,btn){document.querySelectorAll('.rep-tab').forEach(b=>b.cla
 function rankBars(el,entries,maxV,colorFn){el.innerHTML=entries.map(([lbl,v],i)=>`<div class="rank-wrap"><div class="rank-lbl"><span>${['🥇 ','🥈 ','🥉 '][i]||''}${lbl}</span><span style="font-weight:600">${v}</span></div><div class="rank-bg"><div class="rank-fill" style="width:${Math.round(v/maxV*100)}%;background:${colorFn(i)}"></div></div></div>`).join('');}
 
 // Agrupa registros por falla: devuelve [[etiqueta,{min,cnt}],...] ordenado por minutos desc.
+// Etiqueta de una falla para gráficas/tablas. El código 19 (Otro) detalla su observación.
+function etiquetaFalla(r){
+  let k='Cod.'+r.cod+' — '+(r.motDesc||'Sin descripción').toUpperCase();
+  if((r.cod===19||r.cod==='19')&&r.obs&&r.obs.trim()){
+    k+=': '+r.obs.trim();
+  }
+  return k;
+}
+
 function aggFallas(dataset){
   const bf={};
   dataset.forEach(r=>{
-    const k='Cod.'+r.cod+' — '+(r.motDesc||'Sin descripción').toUpperCase();
+    const k=etiquetaFalla(r);
     if(!bf[k])bf[k]={min:0,cnt:0};
     bf[k].min+=r.dem;bf[k].cnt++;
   });
@@ -1216,7 +1225,7 @@ function fallasListHTML(s,totMin,dataset){
     if(dataset){
       const bm={};
       dataset.forEach(r=>{
-        const kk='Cod.'+r.cod+' — '+(r.motDesc||'Sin descripción').toUpperCase();
+        const kk=etiquetaFalla(r);
         if(kk!==k)return;
         if(!bm[r.maq])bm[r.maq]={min:0,cnt:0};bm[r.maq].min+=r.dem;bm[r.maq].cnt++;
       });
@@ -1503,7 +1512,7 @@ function renderRep(per){
     if(s.length&&dias.length){
       const datasets=s.map(([k],i)=>({
         label:k,
-        data:dias.map(d=>data.filter(r=>r.fecha===d&&('Cod.'+r.cod+' — '+(r.motDesc||'Sin descripción').toUpperCase())===k).reduce((t,r)=>t+r.dem,0)),
+        data:dias.map(d=>data.filter(r=>r.fecha===d&&etiquetaFalla(r)===k).reduce((t,r)=>t+r.dem,0)),
         backgroundColor:COLORS[i%COLORS.length]
       }));
       charts['fstack']=new Chart(document.getElementById('cFallasStack'),{type:'bar',data:{labels:dias.map(d=>d.slice(5)),datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y} min`}}},scales:{x:{stacked:true,ticks:{font:{size:9},maxRotation:60}},y:{stacked:true,beginAtZero:true,ticks:{font:{size:10}},title:{display:true,text:'Minutos',font:{size:10}}}}}});
@@ -1528,7 +1537,7 @@ function renderRep(per){
   if(document.getElementById('rs-codigos').classList.contains('active')){
     const MAQ_ESPECIFICAS=['Gemela','H13','H24','Gemela y Horizontales','Multilamina','Canteadoras','Doguera','Despuntador de Topes','Chipera','Banda Larga','Cargadero 1','Cargadero 2','Cargadero 3'];
     const renderCodPie=(dataset, canvasId, topId, rankId, chartKey)=>{
-      const bc={};dataset.forEach(r=>{const k='Cod.'+r.cod+' — '+r.motDesc.toUpperCase();bc[k]=(bc[k]||0)+1;});
+      const bc={};dataset.forEach(r=>{const k=etiquetaFalla(r);bc[k]=(bc[k]||0)+1;});
       const s=Object.entries(bc).sort((a,b)=>b[1]-a[1]),total=s.reduce((t,[,v])=>t+v,0)||1;
       const topEl=document.getElementById(topId);
       if(s.length){const p=Math.round(s[0][1]/total*100);topEl.innerHTML=`<div class="top-badge"><i class="ti ti-flame"></i>Más frecuente: <strong>${s[0][0].split(' — ')[0]}</strong> — ${p}%</div>`;}
@@ -1659,7 +1668,16 @@ function exportarExcel(){
 
 function loadLocal(){
   // Cargar datos históricos (siempre presentes), con _order bajo para que queden al final
-  registros = HISTORICAL.map((r,i)=>({...r,ts:new Date(r.fecha),_order:i}));
+  registros = HISTORICAL.map((r,i)=>normalizarReg({...r,ts:new Date(r.fecha),_order:i}));
+}
+
+// Normaliza registros: el viejo código 22 (Cambio de filo) pasa a código 9 (ahora Cambio de filo).
+// Así los reportes históricos con código 22 se suman al 9 en gráficas, tablas y Word.
+function normalizarReg(r){
+  if(r.cod===22||r.cod==='22'){
+    return {...r,cod:9,motDesc:'Cambio de filo'};
+  }
+  return r;
 }
 
 // Escucha en tiempo real los reportes guardados en Firestore (compartidos entre todos los dispositivos)
@@ -1668,9 +1686,9 @@ function initFirestoreSync(){
     const remotos = snapshot.docs.map(doc=>{
       const d = doc.data();
       const order = d.creado && d.creado.toMillis ? d.creado.toMillis() : Date.now();
-      return {...d, ts: d.fecha ? new Date(d.fecha) : new Date(), _id: doc.id, _order: order};
+      return normalizarReg({...d, ts: d.fecha ? new Date(d.fecha) : new Date(), _id: doc.id, _order: order});
     });
-    registros = [...HISTORICAL.map((r,i)=>({...r,ts:new Date(r.fecha),_order:i})), ...remotos];
+    registros = [...HISTORICAL.map((r,i)=>normalizarReg({...r,ts:new Date(r.fecha),_order:i})), ...remotos];
     updPortada();
     if(document.getElementById('page-historial').classList.contains('active')) renderHist();
     if(document.getElementById('page-reportes').classList.contains('active')) renderRep(periodo);
