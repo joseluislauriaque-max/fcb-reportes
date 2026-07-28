@@ -561,7 +561,7 @@ let SECTORES={'Aserradero':['Gemela','H13','H24','Gemela y Horizontales','Multil
 let MOTIVOS=[
   {cod:1,desc:'Falla mecánica — roturas, problemas mecánicos'},
   {cod:5,desc:'Corte de energía'},
-  {cod:9,desc:'Cambio de hoja'}
+  {cod:9,desc:'Cambio de filo'}
 ];
 
 // Código extra que solo aparece para la máquina Multilamina
@@ -582,8 +582,15 @@ let MOTIVOS_CHIPERA=[
   {cod:22,desc:'Cambio de filo'}
 ];
 
-// Códigos para Banda Larga y Cargadero 3
+// Códigos para Banda Larga
 let MOTIVOS_BANDA_CARGADERO=[
+  {cod:1,desc:'Falla mecánica — roturas, problemas mecánicos'},
+  {cod:2,desc:'Falla eléctrica'}
+];
+
+// Códigos para Cargadero 3
+let MOTIVOS_CARGADERO_3=[
+  {cod:14,desc:'Viga trancada en cargadero'},
   {cod:1,desc:'Falla mecánica — roturas, problemas mecánicos'},
   {cod:2,desc:'Falla eléctrica'}
 ];
@@ -610,10 +617,9 @@ let MOTIVOS_GENERAL=[
   {cod:5,desc:'Corte de energía'},
   {cod:7,desc:'Falla chipera'},
   {cod:8,desc:'Limpieza'},
-  {cod:9,desc:'Cambio de hoja'},
+  {cod:9,desc:'Cambio de filo'},
   {cod:12,desc:'RR-HH'},
   {cod:13,desc:'Rotura Pala'},
-  {cod:14,desc:'Viga trancada en cargadero'},
   {cod:18,desc:'Descanso'},
   {cod:19,desc:'Otro'},
   {cod:20,desc:'Falla de aire - Compresor'},
@@ -971,8 +977,10 @@ function getMotivosParaMaquina(maq){
     lista=MOTIVOS_GENERAL;
   }else if(maq==='Chipera'){
     lista=MOTIVOS_CHIPERA;
-  }else if(maq==='Banda Larga'||maq==='Cargadero 3'){
+  }else if(maq==='Banda Larga'){
     lista=MOTIVOS_BANDA_CARGADERO;
+  }else if(maq==='Cargadero 3'){
+    lista=MOTIVOS_CARGADERO_3;
   }else if(maq==='Cargadero 1'||maq==='Cargadero 2'){
     lista=MOTIVOS_CARGADERO_12;
   }else if(maq==='Gemela y Horizontales'){
@@ -1249,7 +1257,7 @@ function cerrarMaqDetail(){
 
 // Máquinas cuya parada detiene TODA la producción (se suman al tiempo real perdido).
 // H13, H24, Multilamina, etc. pueden parar sin detener el resto, por eso se informan aparte.
-const MAQUINAS_PARAN_TODO=['Gemela','Gemela y Horizontales','Cargadero 1','Cargadero 2','Cargadero 3','General'];
+const MAQUINAS_PARAN_TODO=['Gemela','Gemela y Horizontales','Multilamina','Cargadero 1','Cargadero 2','Cargadero 3','General'];
 
 function parseHoraMin(h){
   if(!h)return null;
@@ -1322,11 +1330,20 @@ function descargarDetalladoSemanal(){
   const bm={};data.forEach(r=>{if(!bm[r.maq])bm[r.maq]={min:0,cnt:0};bm[r.maq].min+=r.dem;bm[r.maq].cnt++;});
   const porMaq=Object.entries(bm).sort((a,b)=>b[1].min-a[1].min);
   // Pérdida REAL de producción por máquina (solo las que detienen toda la línea)
-  const realPorMaq=MAQUINAS_PARAN_TODO
-    .map(m=>[m,minutosRealesPerdidos(data.filter(r=>r.maq===m))])
-    .filter(([,mm])=>mm>0)
-    .sort((a,b)=>b[1]-a[1]);
-  let peorMaq=realPorMaq.length?realPorMaq[0][0]:null,peorMin=realPorMaq.length?realPorMaq[0][1]:0;
+  // Gemela y "Gemela y Horizontales" se muestran agrupadas y sus minutos se suman.
+  const GRUPO_GEMELA=['Gemela','Gemela y Horizontales'];
+  const gruposReal=MAQUINAS_PARAN_TODO
+    .filter(m=>!GRUPO_GEMELA.includes(m))
+    .map(m=>({label:m,maqs:[m]}));
+  gruposReal.unshift({label:'Gemela + Gemela y Horizontales',maqs:GRUPO_GEMELA});
+  const realPorMaq=gruposReal
+    .map(g=>{
+      const dg=data.filter(r=>g.maqs.includes(r.maq));
+      return {label:g.label,min:minutosRealesPerdidos(dg),fallas:aggFallas(dg)};
+    })
+    .filter(g=>g.min>0)
+    .sort((a,b)=>b.min-a.min);
+  let peorMaq=realPorMaq.length?realPorMaq[0].label:null,peorMin=realPorMaq.length?realPorMaq[0].min:0;
   const peorEsReal=!!peorMaq;
   if(!peorMaq&&porMaq.length){peorMaq=porMaq[0][0];peorMin=porMaq[0][1].min;}
 
@@ -1402,8 +1419,11 @@ function descargarDetalladoSemanal(){
     ...(realPorMaq.length?[
       titulo('Pérdida real de producción por máquina'),
       new Table({width:{size:100,type:WidthType.PERCENTAGE},rows:[
-        fila([celda('Máquina',{head:true,w:68}),celda('Minutos reales perdidos',{head:true,center:true,w:32})]),
-        ...realPorMaq.map(([m,mm])=>fila([celda(m,{bold:true,fill:'FDE4D6',color:'C2410C'}),celda(fmtHs(mm),{center:true,bold:true})]))
+        fila([celda('Máquina / Falla',{head:true,w:52}),celda('Cantidad',{head:true,center:true,w:16}),celda('Minutos reales perdidos',{head:true,center:true,w:32})]),
+        ...realPorMaq.flatMap(g=>[
+          fila([celda(g.label,{bold:true,fill:'FDE4D6',color:'C2410C'}),celda('',{fill:'FDE4D6'}),celda(fmtHs(g.min),{center:true,bold:true,fill:'FDE4D6',color:'C2410C'})]),
+          ...g.fallas.map(([k,f])=>fila([celda('    '+k),celda(f.cnt,{center:true}),celda(f.min+' min',{center:true})]))
+        ])
       ]})
     ]:[]),
     new Paragraph({spacing:{before:360}}),
