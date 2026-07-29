@@ -1195,6 +1195,15 @@ function etiquetaFalla(r){
   return k;
 }
 
+// Palabra según el tipo: el código 9 (Cambio de filo) es un CAMBIO, no una falla.
+// Recibe la etiqueta (o el código) y la cantidad, y devuelve 'cambio/cambios' o 'falla/fallas'.
+function palabraTipo(etiqOCod,cnt){
+  const s=String(etiqOCod);
+  const esCambio = s.startsWith('Cod.9 —') || s==='9' || etiqOCod===9;
+  if(esCambio) return cnt===1?'cambio':'cambios';
+  return cnt===1?'falla':'fallas';
+}
+
 function aggFallas(dataset){
   const bf={};
   dataset.forEach(r=>{
@@ -1228,11 +1237,11 @@ function fallasListHTML(s,totMin,dataset){
         if(kk!==k)return;
         if(!bm[r.maq])bm[r.maq]={min:0,cnt:0};bm[r.maq].min+=r.dem;bm[r.maq].cnt++;
       });
-      const filas=Object.entries(bm).sort((a,b)=>b[1].min-a[1].min).map(([m,mv])=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 4px 3px 20px"><span><i class="ti ti-cpu" style="font-size:11px;color:#8e8e93;margin-right:3px"></i>${m}</span><span style="color:#8e8e93">${mv.cnt} ${mv.cnt===1?'falla':'fallas'}</span><span style="font-weight:600">${mv.min} min</span></div>`).join('');
+      const filas=Object.entries(bm).sort((a,b)=>b[1].min-a[1].min).map(([m,mv])=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 4px 3px 20px"><span><i class="ti ti-cpu" style="font-size:11px;color:#8e8e93;margin-right:3px"></i>${m}</span><span style="color:#8e8e93">${mv.cnt} ${palabraTipo(k,mv.cnt)}</span><span style="font-weight:600">${mv.min} min</span></div>`).join('');
       det=`<div class="despl-det" style="display:none;background:rgba(232,82,10,0.06);border-radius:8px;margin-top:5px;padding:4px 4px">${filas}</div>`;
       chev='<i class="ti ti-chevron-right despl-chev" style="font-size:12px;color:#8e8e93;transition:transform .15s"></i>';
     }
-    return `<div class="rank-wrap" ${dataset?'onclick="toggleDespl(this)" style="cursor:pointer"':''}><div class="rank-lbl"><span style="display:flex;align-items:center;gap:6px">${chev}<span style="width:10px;height:10px;border-radius:2px;background:${COLORS[i%COLORS.length]};display:inline-block"></span>${k}</span><span style="font-weight:600">${v.min} min <span style="color:#8e8e93;font-weight:400">· ${v.cnt} ${v.cnt===1?'falla':'fallas'} (${p}%)</span></span></div><div class="rank-bg"><div class="rank-fill" style="width:${p}%;background:${COLORS[i%COLORS.length]}"></div></div>${det}</div>`;
+    return `<div class="rank-wrap" ${dataset?'onclick="toggleDespl(this)" style="cursor:pointer"':''}><div class="rank-lbl"><span style="display:flex;align-items:center;gap:6px">${chev}<span style="width:10px;height:10px;border-radius:2px;background:${COLORS[i%COLORS.length]};display:inline-block"></span>${k}</span><span style="font-weight:600">${v.min} min <span style="color:#8e8e93;font-weight:400">· ${v.cnt} ${palabraTipo(k,v.cnt)} (${p}%)</span></span></div><div class="rank-bg"><div class="rank-fill" style="width:${p}%;background:${COLORS[i%COLORS.length]}"></div></div>${det}</div>`;
   }).join('');
 }
 
@@ -1240,7 +1249,7 @@ function fallasListHTML(s,totMin,dataset){
 function pieFallas(canvasId,chartKey,s,totMin){
   dc(chartKey);
   if(!s.length)return;
-  charts[chartKey]=new Chart(document.getElementById(canvasId),{type:'pie',data:{labels:s.map(([k])=>k),datasets:[{data:s.map(([,v])=>v.min),backgroundColor:s.map((_,i)=>COLORS[i%COLORS.length]),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const v=s[c.dataIndex][1];const p=Math.round(v.min/totMin*100);return `${c.label}: ${v.min} min · ${v.cnt} ${v.cnt===1?'falla':'fallas'} (${p}%)`;}}}}}});
+  charts[chartKey]=new Chart(document.getElementById(canvasId),{type:'pie',data:{labels:s.map(([k])=>k),datasets:[{data:s.map(([,v])=>v.min),backgroundColor:s.map((_,i)=>COLORS[i%COLORS.length]),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const et=s[c.dataIndex][0];const v=s[c.dataIndex][1];const p=Math.round(v.min/totMin*100);return `${c.label}: ${v.min} min · ${v.cnt} ${palabraTipo(et,v.cnt)} (${p}%)`;}}}}}});
 }
 
 // Detalle de fallas de una máquina en el rango de fechas seleccionado
@@ -1478,7 +1487,7 @@ function renderRep(per){
     // Igual que filaM pero con el desglose de códigos que componen esa máquina debajo.
     const filaMDet=([m,v])=>{
       const det=aggFallas(data.filter(r=>r.maq===m))
-        .map(([k,f])=>`<div style="display:flex;justify-content:space-between;font-size:11px;color:#636366;padding:2px 0 2px 24px"><span>${k}</span><span style="color:#8e8e93">${f.cnt} ${f.cnt===1?'falla':'fallas'}</span><span style="font-weight:600">${f.min} min</span></div>`)
+        .map(([k,f])=>`<div style="display:flex;justify-content:space-between;font-size:11px;color:#636366;padding:2px 0 2px 24px"><span>${k}</span><span style="color:#8e8e93">${f.cnt} ${palabraTipo(k,f.cnt)}</span><span style="font-weight:600">${f.min} min</span></div>`)
         .join('');
       return filaM([m,v])+det;
     };

@@ -2,7 +2,7 @@
   "name": "Reportes Diarios FCB",
   "short_name": "FCB Reportes",
   "description": "Control de cambio de herramienta - Forestal Caja Bancaria",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",
