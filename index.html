@@ -559,7 +559,7 @@ let SECTORES={'Aserradero':['Gemela','H13','H24','Gemela y Horizontales','Multil
 // H13, H24, Multilamina, etc. pueden parar de forma independiente sin frenar la línea completa.
 
 let MOTIVOS=[
-  {cod:1,desc:'Falla mecánica — roturas, problemas mecánicos'},
+  {cod:1,desc:'Falla mecánica'},
   {cod:5,desc:'Corte de energía'},
   {cod:9,desc:'Cambio de filo'}
 ];
@@ -578,27 +578,26 @@ let MOTIVOS_GH_EXTRA=[
 // Códigos para la máquina Chipera
 let MOTIVOS_CHIPERA=[
   {cod:2,desc:'Falla eléctrica'},
-  {cod:1,desc:'Falla mecánica — roturas, problemas mecánicos'},
-  {cod:9,desc:'Cambio de filo'}
+  {cod:1,desc:'Falla mecánica'}
 ];
 
 // Códigos para Banda Larga
 let MOTIVOS_BANDA_CARGADERO=[
-  {cod:1,desc:'Falla mecánica — roturas, problemas mecánicos'},
+  {cod:1,desc:'Falla mecánica'},
   {cod:2,desc:'Falla eléctrica'}
 ];
 
 // Códigos para Cargadero 3
 let MOTIVOS_CARGADERO_3=[
   {cod:14,desc:'Viga trancada en cargadero'},
-  {cod:1,desc:'Falla mecánica — roturas, problemas mecánicos'},
+  {cod:1,desc:'Falla mecánica'},
   {cod:2,desc:'Falla eléctrica'}
 ];
 
 // Códigos para Cargadero 1 y Cargadero 2
 let MOTIVOS_CARGADERO_12=[
   {cod:14,desc:'Viga trancada en cargadero'},
-  {cod:1,desc:'Falla mecánica — roturas, problemas mecánicos'},
+  {cod:1,desc:'Falla mecánica'},
   {cod:2,desc:'Falla eléctrica'},
   {cod:3,desc:'Falta madera — sin vigas en cargadero'}
 ];
@@ -610,7 +609,7 @@ let MOTIVOS_GEM_HORIZ=[
 ];
 
 let MOTIVOS_GENERAL=[
-  {cod:1,desc:'Falla mecánica — roturas, problemas mecánicos'},
+  {cod:1,desc:'Falla mecánica'},
   {cod:2,desc:'Falla eléctrica'},
   {cod:3,desc:'Falta madera — sin vigas en cargadero'},
   {cod:4,desc:'Cambio de corte'},
@@ -1681,9 +1680,19 @@ function loadLocal(){
 // Normaliza registros: el viejo código 22 (Cambio de filo) pasa a código 9 (Cambio de filo)
 // y se reasigna a la máquina "Gemela y Horizontales".
 // Así los reportes históricos con código 22 se unifican en gráficas, tablas y Word.
+// Normaliza registros:
+//  - El viejo código 22 (Cambio de filo) pasa a código 9 y a la máquina "Gemela y Horizontales".
+//  - Todo registro con código 9 (aunque diga "Cambio de hoja") queda unificado como "Cambio de filo".
+// Así el historial se muestra consistente en gráficas, tablas y Word.
 function normalizarReg(r){
   if(r.cod===22||r.cod==='22'){
     return {...r,cod:9,motDesc:'Cambio de filo',maq:'Gemela y Horizontales'};
+  }
+  if(r.cod===9||r.cod==='9'){
+    return {...r,motDesc:'Cambio de filo'};
+  }
+  if(r.cod===1||r.cod==='1'){
+    return {...r,motDesc:'Falla mecánica'};
   }
   return r;
 }
