@@ -579,7 +579,7 @@ let MOTIVOS_GH_EXTRA=[
 let MOTIVOS_CHIPERA=[
   {cod:2,desc:'Falla eléctrica'},
   {cod:1,desc:'Falla mecánica — roturas, problemas mecánicos'},
-  {cod:22,desc:'Cambio de filo'}
+  {cod:9,desc:'Cambio de filo'}
 ];
 
 // Códigos para Banda Larga
@@ -1476,11 +1476,18 @@ function renderRep(per){
     const bmSi={},bmNo={};
     data.forEach(r=>{const t=MAQUINAS_PARAN_TODO.includes(r.maq)?bmSi:bmNo;if(!t[r.maq])t[r.maq]={min:0,cnt:0};t[r.maq].min+=r.dem;t[r.maq].cnt++;});
     const filaM=([m,v])=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0 3px 8px;border-bottom:0.5px solid rgba(0,0,0,0.06)"><span>${m}</span><span style="color:#8e8e93">${v.cnt} ${v.cnt===1?'falla':'fallas'}</span><span style="font-weight:600">${v.min} min</span></div>`;
+    // Igual que filaM pero con el desglose de códigos que componen esa máquina debajo.
+    const filaMDet=([m,v])=>{
+      const det=aggFallas(data.filter(r=>r.maq===m))
+        .map(([k,f])=>`<div style="display:flex;justify-content:space-between;font-size:11px;color:#636366;padding:2px 0 2px 24px"><span>${k}</span><span style="color:#8e8e93">${f.cnt} ${f.cnt===1?'falla':'fallas'}</span><span style="font-weight:600">${f.min} min</span></div>`)
+        .join('');
+      return filaM([m,v])+det;
+    };
     const minNo=Object.values(bmNo).reduce((t,v)=>t+v.min,0);
     document.getElementById('real-perdido').innerHTML=`
       <div style="text-align:center;margin-bottom:10px"><div style="font-size:11px;color:#8e8e93;text-transform:uppercase;letter-spacing:0.5px">Minutos reales perdidos</div><span style="font-size:32px;font-weight:700;color:#E8520A">${realP}</span><span style="font-size:14px;color:#8e8e93"> min (${(realP/60).toFixed(1)} hs)</span></div>
       <div style="font-size:11px;font-weight:700;color:#c2410c;margin-bottom:2px"><i class="ti ti-alert-octagon" style="font-size:12px"></i> SÍ SUMAN — detienen toda la producción</div>
-      ${Object.entries(bmSi).sort((a,b)=>b[1].min-a[1].min).map(filaM).join('')||'<p style="font-size:12px;color:#8e8e93;padding-left:8px">Sin paradas de este tipo en el período.</p>'}
+      ${Object.entries(bmSi).sort((a,b)=>b[1].min-a[1].min).map(filaMDet).join('')||'<p style="font-size:12px;color:#8e8e93;padding-left:8px">Sin paradas de este tipo en el período.</p>'}
       <div style="font-size:11px;font-weight:700;color:#8e8e93;margin:10px 0 2px"><i class="ti ti-circle-minus" style="font-size:12px"></i> NO SUMAN — no detienen el resto de la línea (${minNo} min aparte)</div>
       ${Object.entries(bmNo).sort((a,b)=>b[1].min-a[1].min).map(filaM).join('')||'<p style="font-size:12px;color:#8e8e93;padding-left:8px">Sin paradas de este tipo en el período.</p>'}`;
     const bm={};allMaq().forEach(m=>{bm[m]=0;});data.forEach(r=>{if(bm[r.maq]!==undefined)bm[r.maq]+=r.dem;});
@@ -1671,11 +1678,12 @@ function loadLocal(){
   registros = HISTORICAL.map((r,i)=>normalizarReg({...r,ts:new Date(r.fecha),_order:i}));
 }
 
-// Normaliza registros: el viejo código 22 (Cambio de filo) pasa a código 9 (ahora Cambio de filo).
-// Así los reportes históricos con código 22 se suman al 9 en gráficas, tablas y Word.
+// Normaliza registros: el viejo código 22 (Cambio de filo) pasa a código 9 (Cambio de filo)
+// y se reasigna a la máquina "Gemela y Horizontales".
+// Así los reportes históricos con código 22 se unifican en gráficas, tablas y Word.
 function normalizarReg(r){
   if(r.cod===22||r.cod==='22'){
-    return {...r,cod:9,motDesc:'Cambio de filo'};
+    return {...r,cod:9,motDesc:'Cambio de filo',maq:'Gemela y Horizontales'};
   }
   return r;
 }
