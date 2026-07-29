@@ -1685,6 +1685,10 @@ function loadLocal(){
 //  - Todo registro con código 9 (aunque diga "Cambio de hoja") queda unificado como "Cambio de filo".
 // Así el historial se muestra consistente en gráficas, tablas y Word.
 function normalizarReg(r){
+  // Registro puntual: cód. 19 "grieta hoja 1" de 86 min → cód. 9 (Cambio de filo), máquina H13.
+  if((r.cod===19||r.cod==='19') && r.obs && r.obs.toLowerCase().includes('grieta hoja 1') && r.dem===86){
+    return {...r,cod:9,motDesc:'Cambio de filo',maq:'H13'};
+  }
   if(r.cod===22||r.cod==='22'){
     return {...r,cod:9,motDesc:'Cambio de filo',maq:'Gemela y Horizontales'};
   }
