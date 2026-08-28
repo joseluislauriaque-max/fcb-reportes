@@ -448,7 +448,35 @@ textarea{resize:none;line-height:1.5}
       <label>Código</label>
       <select id="bus-cod"><option value="">Todos</option></select>
       <button onclick="buscarRegs()" style="width:100%;padding:11px;background:#0369a1;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px"><i class="ti ti-search"></i> Buscar</button>
+      <button onclick="abrirAltaBus()" style="width:100%;padding:11px;background:#15803d;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px"><i class="ti ti-plus"></i> Agregar registro a mano</button>
       <div id="bus-resultados" style="margin-top:12px"></div>
+
+      <!-- formulario de ALTA manual -->
+      <div id="bus-alta-form" style="display:none;margin-top:12px;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px">
+        <div style="font-size:13px;font-weight:700;color:#15803d;margin-bottom:10px"><i class="ti ti-plus"></i> Nuevo registro (carga manual)</div>
+        <label>N° de operario</label>
+        <input type="text" id="ba-op" placeholder="Ej: 922" inputmode="numeric"/>
+        <label>Fecha</label>
+        <input type="date" id="ba-fecha"/>
+        <label>Hora inicio</label>
+        <input type="time" id="ba-hi"/>
+        <label>Hora fin</label>
+        <input type="time" id="ba-hf"/>
+        <label>Sector</label>
+        <select id="ba-sec" onchange="altaOnSector()"></select>
+        <label>Máquina</label>
+        <select id="ba-maq" onchange="altaOnMaq()"></select>
+        <label>Código de motivo</label>
+        <select id="ba-cod"></select>
+        <label>Minutos de demora</label>
+        <input type="number" id="ba-dem" inputmode="numeric" min="0" placeholder="Ej: 15"/>
+        <label>Observación</label>
+        <textarea id="ba-obs" rows="2"></textarea>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button onclick="guardarAltaBus()" style="flex:1;padding:11px;background:#15803d;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer"><i class="ti ti-check"></i> Guardar</button>
+          <button onclick="cancelarAltaBus()" style="flex:1;padding:11px;background:#e5e5ea;color:#3a3a3c;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Cancelar</button>
+        </div>
+      </div>
 
       <!-- formulario de edición -->
       <div id="bus-edit-form" style="display:none;margin-top:12px;padding:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px">
@@ -1206,6 +1234,60 @@ async function guardarEdicionBus(){
 function cancelarEdicionBus(){
   document.getElementById('bus-edit-form').style.display='none';
   busSeleccionado=null;
+}
+
+// ── Alta manual de registro desde el buscador ──
+function abrirAltaBus(){
+  // Llenar sector
+  const selSec=document.getElementById('ba-sec');
+  if(selSec.options.length===0){Object.keys(SECTORES).forEach(s=>selSec.appendChild(new Option(s,s)));}
+  altaOnSector();
+  // Prefijar fecha con la del buscador o la de hoy
+  document.getElementById('ba-fecha').value=document.getElementById('bus-fecha').value||hoyISO();
+  document.getElementById('bus-alta-form').style.display='block';
+  document.getElementById('bus-alta-form').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function altaOnSector(){
+  const s=document.getElementById('ba-sec').value,el=document.getElementById('ba-maq');
+  el.innerHTML='';
+  if(s&&SECTORES[s])SECTORES[s].forEach(m=>el.appendChild(new Option(m,m)));
+  altaOnMaq();
+}
+function altaOnMaq(){
+  const maq=document.getElementById('ba-maq').value,el=document.getElementById('ba-cod');
+  el.innerHTML='';
+  getMotivosParaMaquina(maq).forEach(mt=>el.appendChild(new Option(mt.cod+' — '+mt.desc,mt.cod)));
+}
+async function guardarAltaBus(){
+  const op=document.getElementById('ba-op').value.trim();
+  const fecha=document.getElementById('ba-fecha').value;
+  const hi=document.getElementById('ba-hi').value;
+  const hf=document.getElementById('ba-hf').value;
+  const sec=document.getElementById('ba-sec').value;
+  const maq=document.getElementById('ba-maq').value;
+  const cod=document.getElementById('ba-cod').value;
+  const dem=parseInt(document.getElementById('ba-dem').value,10);
+  const obs=document.getElementById('ba-obs').value.trim();
+  if(!op||!fecha||!sec||!maq||!cod||isNaN(dem)||dem<0){alert('Completá operario, fecha, sector, máquina, código y minutos.');return;}
+  const motObj=getMotivosParaMaquina(maq).find(m=>String(m.cod)===String(cod));
+  const nom=(typeof OPERARIOS!=='undefined'&&OPERARIOS[op])?OPERARIOS[op]:op;
+  const registro={op,nom,fecha,hi,hf,sec,maq,obs,cod:motObj?motObj.cod:parseInt(cod,10),motDesc:motObj?motObj.desc:'',dem,foto:null};
+  let docRef;
+  try{
+    docRef=await db.collection('reportes').add({...registro, creado:firebase.firestore.FieldValue.serverTimestamp(), editado:true});
+  }catch(e){
+    console.error('Error agregando registro:',e);
+    alert('No se pudo agregar. Verificá tu conexión e intentá de nuevo.');return;
+  }
+  registros.push({...registro, ts:new Date(fecha), _order:Date.now(), _id:docRef.id, editado:true});
+  document.getElementById('bus-alta-form').style.display='none';
+  ['ba-op','ba-hi','ba-hf','ba-dem','ba-obs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('bus-fecha').value=fecha;
+  buscarRegs();
+  alert('Registro agregado correctamente.');
+}
+function cancelarAltaBus(){
+  document.getElementById('bus-alta-form').style.display='none';
 }
 
 async function borrarRegBus(idx){
