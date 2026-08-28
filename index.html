@@ -1449,12 +1449,20 @@ function rankBars(el,entries,maxV,colorFn){el.innerHTML=entries.map(([lbl,v],i)=
 
 // Agrupa registros por falla: devuelve [[etiqueta,{min,cnt}],...] ordenado por minutos desc.
 // Etiqueta de una falla para gráficas/tablas. El código 19 (Otro) detalla su observación.
-function etiquetaFalla(r){
-  let k='Cod.'+r.cod+' — '+(r.motDesc||'Sin descripción').toUpperCase();
-  if((r.cod===19||r.cod==='19')&&r.obs&&r.obs.trim()){
-    k+=': '+r.obs.trim();
+// Descripción oficial de un código (la que está en las listas de motivos), sin importar
+// cómo se haya escrito en cada registro. Así todos los registros de un mismo código se juntan.
+function descOficialCod(cod){
+  const vistos={};
+  for(const m of allMaq()){
+    for(const mt of getMotivosParaMaquina(m)){
+      if(String(mt.cod)===String(cod))return mt.desc;
+    }
   }
-  return k;
+  return null;
+}
+function etiquetaFalla(r){
+  const desc=descOficialCod(r.cod)||r.motDesc||'Sin descripción';
+  return 'Cod.'+r.cod+' — '+desc.toUpperCase();
 }
 
 // Palabra según el tipo: el código 9 (Cambio de filo) es un CAMBIO, no una falla.
@@ -1493,13 +1501,17 @@ function fallasListHTML(s,totMin,dataset){
     const p=Math.round(v.min/totMin*100);
     let det='',chev='';
     if(dataset){
+      const esOtro = k.startsWith('Cod.19 —');
       const bm={};
       dataset.forEach(r=>{
         const kk=etiquetaFalla(r);
         if(kk!==k)return;
-        if(!bm[r.maq])bm[r.maq]={min:0,cnt:0};bm[r.maq].min+=r.dem;bm[r.maq].cnt++;
+        // Para el código 19 (Otro), desglosar por la observación escrita; para el resto, por máquina.
+        const clave = esOtro ? ((r.obs&&r.obs.trim())?r.obs.trim():'Sin detalle')+' — '+r.maq : r.maq;
+        if(!bm[clave])bm[clave]={min:0,cnt:0};bm[clave].min+=r.dem;bm[clave].cnt++;
       });
-      const filas=Object.entries(bm).sort((a,b)=>b[1].min-a[1].min).map(([m,mv])=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 4px 3px 20px"><span><i class="ti ti-cpu" style="font-size:11px;color:#8e8e93;margin-right:3px"></i>${m}</span><span style="color:#8e8e93">${mv.cnt} ${palabraTipo(k,mv.cnt)}</span><span style="font-weight:600">${mv.min} min</span></div>`).join('');
+      const icono = esOtro ? 'ti-note' : 'ti-cpu';
+      const filas=Object.entries(bm).sort((a,b)=>b[1].min-a[1].min).map(([m,mv])=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 4px 3px 20px"><span><i class="ti ${icono}" style="font-size:11px;color:#8e8e93;margin-right:3px"></i>${m}</span><span style="color:#8e8e93">${mv.cnt} ${palabraTipo(k,mv.cnt)}</span><span style="font-weight:600">${mv.min} min</span></div>`).join('');
       det=`<div class="despl-det" style="display:none;background:rgba(232,82,10,0.06);border-radius:8px;margin-top:5px;padding:4px 4px">${filas}</div>`;
       chev='<i class="ti ti-chevron-right despl-chev" style="font-size:12px;color:#8e8e93;transition:transform .15s"></i>';
     }
