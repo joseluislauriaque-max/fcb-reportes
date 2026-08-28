@@ -437,6 +437,38 @@ textarea{resize:none;line-height:1.5}
     </div>
 
 
+    <!-- ══ BUSCADOR / CORRECCIÓN DE REGISTROS ══ -->
+    <div class="card" id="buscador-card">
+      <div class="admin-sec-title" style="color:#0369a1"><i class="ti ti-search" style="margin-right:5px;font-size:13px"></i>Buscar y corregir registros</div>
+      <p style="font-size:12px;color:#636366;margin-bottom:10px;line-height:1.5">Buscá una falla por día para revisarla, corregirla o borrarla (por ejemplo si quedó cargada con demasiados minutos o mal la máquina).</p>
+      <label>Día</label>
+      <input type="date" id="bus-fecha"/>
+      <label>Máquina</label>
+      <select id="bus-maq"><option value="">Todas</option></select>
+      <label>Código</label>
+      <select id="bus-cod"><option value="">Todos</option></select>
+      <button onclick="buscarRegs()" style="width:100%;padding:11px;background:#0369a1;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px"><i class="ti ti-search"></i> Buscar</button>
+      <div id="bus-resultados" style="margin-top:12px"></div>
+
+      <!-- formulario de edición -->
+      <div id="bus-edit-form" style="display:none;margin-top:12px;padding:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px">
+        <div style="font-size:13px;font-weight:700;color:#0369a1;margin-bottom:10px"><i class="ti ti-edit"></i> Editar registro</div>
+        <label>Máquina</label>
+        <select id="be-maq"></select>
+        <label>Código de motivo</label>
+        <select id="be-cod"></select>
+        <label>Minutos de demora</label>
+        <input type="number" id="be-dem" inputmode="numeric" min="0"/>
+        <label>Observación</label>
+        <textarea id="be-obs" rows="2"></textarea>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button onclick="guardarEdicionBus()" style="flex:1;padding:11px;background:#15803d;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer"><i class="ti ti-check"></i> Guardar</button>
+          <button onclick="cancelarEdicionBus()" style="flex:1;padding:11px;background:#e5e5ea;color:#3a3a3c;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+
     <!-- EXPORTAR EXCEL -->
     <div class="card">
       <div class="admin-sec-title" style="color:#15803d"><i class="ti ti-file-spreadsheet" style="margin-right:5px;font-size:13px"></i>Exportar datos a Excel</div>
@@ -626,6 +658,38 @@ let MOTIVOS_GENERAL=[
 ];
 
 const COLORS=['#E8520A','#0369a1','#16a34a','#7c3aed','#db2777','#ca8a04','#0891b2','#65a30d','#9333ea','#ea580c','#dc2626','#0284c7','#0f766e','#b45309','#4338ca','#be185d','#15803d','#7e22ce','#c2410c'];
+
+// Color fijo por código de motivo (para que cada código tenga siempre el mismo color en las gráficas).
+const COLORES_COD={
+  1:'#dc2626',   // Falla mecánica → rojo
+  2:'#0369a1',   // Falla eléctrica → azul
+  3:'#b45309',   // Falta madera → marrón/ámbar oscuro
+  4:'#7c3aed',   // Cambio de corte → violeta
+  5:'#ca8a04',   // Corte de energía → mostaza
+  7:'#0891b2',   // Falla chipera → celeste
+  8:'#65a30d',   // Limpieza → verde lima
+  9:'#E8520A',   // Cambio de filo → naranja
+  10:'#0d9488',  // Falla chipera (histórico) → teal
+  12:'#db2777',  // RR-HH → rosa
+  13:'#9333ea',  // Rotura Pala → púrpura
+  14:'#16a34a',  // Viga trancada en cargadero → verde
+  16:'#a16207',  // Descabezado de vigas (histórico) → ocre
+  18:'#64748b',  // Descanso → gris azulado
+  19:'#78716c',  // Otro → gris
+  20:'#4338ca',  // Falla de aire - Compresor → índigo
+  21:'#2563eb',  // Corte de agua → azul brillante
+  30:'#be185d'   // Dimensionado-Motocierra → magenta
+};
+// Devuelve el color de una falla según su código. Si el código no tiene color fijo,
+// usa la paleta general por posición (colorFallback).
+function colorFalla(etiqOCod,colorFallback){
+  let cod=etiqOCod;
+  if(typeof etiqOCod==='string'){
+    const m=etiqOCod.match(/^Cod\.(\d+)/);
+    cod=m?parseInt(m[1],10):null;
+  }
+  return COLORES_COD[cod]||colorFallback;
+}
 
 // Directorio de operarios: número → nombre
 let OPERARIOS = {
@@ -886,7 +950,7 @@ function goTo(id){
   if(id==='registro')autoFechaHora(false);
   if(id==='historial')renderHist();
   if(id==='reportes'){const sf=document.getElementById('sem-fecha');if(sf&&!sf.value)sf.value=new Date().toISOString().split('T')[0];renderRep(periodo);}
-  if(id==='admin'){renderAdmin();setExpPer('hoy',document.getElementById('exp-hoy'));}
+  if(id==='admin'){renderAdmin();setExpPer('hoy',document.getElementById('exp-hoy'));initBuscador();}
 }
 
 function updPortada(){
@@ -1040,6 +1104,122 @@ async function guardarEdicionReporte(){
 
   document.getElementById('edit-reporte-form').style.display='none';
   document.getElementById('btn-editar-reporte').style.display='none';
+}
+
+// ══ BUSCADOR / CORRECCIÓN DE REGISTROS (panel admin) ══
+let busSeleccionado=null; // registro que se está editando
+
+// Llena los selects de máquina y código del buscador (una vez).
+function initBuscador(){
+  const selMaq=document.getElementById('bus-maq');
+  if(selMaq && selMaq.options.length<=1){
+    allMaq().forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;selMaq.appendChild(o);});
+  }
+  const selCod=document.getElementById('bus-cod');
+  if(selCod && selCod.options.length<=1){
+    // Todos los códigos conocidos, sin repetir, ordenados.
+    const vistos={};const todos=[];
+    allMaq().forEach(m=>getMotivosParaMaquina(m).forEach(mt=>{if(!vistos[mt.cod]){vistos[mt.cod]=1;todos.push(mt);}}));
+    todos.sort((a,b)=>a.cod-b.cod).forEach(mt=>{const o=document.createElement('option');o.value=mt.cod;o.textContent=mt.cod+' — '+mt.desc;selCod.appendChild(o);});
+  }
+  if(!document.getElementById('bus-fecha').value){
+    document.getElementById('bus-fecha').value=hoyISO();
+  }
+}
+
+// Fecha de hoy en formato YYYY-MM-DD.
+function hoyISO(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+function buscarRegs(){
+  const f=document.getElementById('bus-fecha').value;
+  const maq=document.getElementById('bus-maq').value;
+  const cod=document.getElementById('bus-cod').value;
+  const cont=document.getElementById('bus-resultados');
+  if(!f){cont.innerHTML='<p style="font-size:13px;color:#dc2626">Elegí un día.</p>';return;}
+  let res=registros.filter(r=>r.fecha===f);
+  if(maq)res=res.filter(r=>r.maq===maq);
+  if(cod)res=res.filter(r=>String(r.cod)===String(cod));
+  res.sort((a,b)=>(a.hi||'').localeCompare(b.hi||''));
+  if(!res.length){cont.innerHTML='<p style="font-size:13px;color:#8e8e93;padding:6px 0">No se encontraron registros con esos filtros.</p>';return;}
+  cont.innerHTML=`<div style="font-size:12px;color:#636366;margin-bottom:8px">${res.length} registro(s) encontrado(s)</div>`+
+    res.map(r=>{
+      const idx=registros.indexOf(r);
+      const editable=!!r._id; // solo los de Firestore se pueden editar/borrar; los históricos no
+      return `<div style="border:1px solid #e5e5ea;border-radius:10px;padding:10px;margin-bottom:8px;background:#fff">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="font-size:13px">
+            <div style="font-weight:600;color:#1c1c1e">${r.maq} · Cod.${r.cod} ${r.motDesc||''}</div>
+            <div style="color:#636366;font-size:12px;margin-top:2px">${r.hi||'--'} a ${r.hf||'--'} · ${r.dem} min · Op ${r.op||'--'}</div>
+            ${r.obs?`<div style="color:#8e8e93;font-size:12px;margin-top:2px;font-style:italic">${r.obs}</div>`:''}
+          </div>
+        </div>
+        ${editable?`<div style="display:flex;gap:6px;margin-top:8px">
+          <button onclick="editarRegBus(${idx})" style="flex:1;padding:8px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer"><i class="ti ti-edit"></i> Editar</button>
+          <button onclick="borrarRegBus(${idx})" style="flex:1;padding:8px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer"><i class="ti ti-trash"></i> Borrar</button>
+        </div>`:`<div style="font-size:11px;color:#8e8e93;margin-top:6px"><i class="ti ti-lock"></i> Registro histórico (no editable)</div>`}
+      </div>`;
+    }).join('');
+}
+
+function editarRegBus(idx){
+  const r=registros[idx];if(!r||!r._id)return;
+  busSeleccionado=r;
+  // Llenar selects del formulario de edición
+  const selMaq=document.getElementById('be-maq');
+  selMaq.innerHTML='';allMaq().forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;if(m===r.maq)o.selected=true;selMaq.appendChild(o);});
+  llenarCodEdicionBus(r.maq,r.cod);
+  selMaq.onchange=()=>llenarCodEdicionBus(selMaq.value,null);
+  document.getElementById('be-dem').value=r.dem;
+  document.getElementById('be-obs').value=r.obs||'';
+  document.getElementById('bus-edit-form').style.display='block';
+  document.getElementById('bus-edit-form').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function llenarCodEdicionBus(maq,codSel){
+  const selCod=document.getElementById('be-cod');selCod.innerHTML='';
+  getMotivosParaMaquina(maq).forEach(mt=>{const o=document.createElement('option');o.value=mt.cod;o.textContent=mt.cod+' — '+mt.desc;if(codSel!=null&&String(mt.cod)===String(codSel))o.selected=true;selCod.appendChild(o);});
+}
+
+async function guardarEdicionBus(){
+  if(!busSeleccionado||!busSeleccionado._id)return;
+  const maq=document.getElementById('be-maq').value;
+  const cod=document.getElementById('be-cod').value;
+  const dem=parseInt(document.getElementById('be-dem').value,10);
+  const obs=document.getElementById('be-obs').value.trim();
+  if(!maq||!cod||isNaN(dem)||dem<0){alert('Completá máquina, código y minutos válidos.');return;}
+  const motObj=getMotivosParaMaquina(maq).find(m=>String(m.cod)===String(cod));
+  const codFinal=motObj?motObj.cod:parseInt(cod,10);
+  const motDesc=motObj?motObj.desc:'';
+  try{
+    await db.collection('reportes').doc(busSeleccionado._id).update({maq,cod:codFinal,motDesc,dem,obs,editado:true});
+  }catch(e){
+    console.error('Error editando:',e);
+    alert('No se pudo guardar. Verificá tu conexión e intentá de nuevo.');return;
+  }
+  const idx=registros.findIndex(r=>r._id===busSeleccionado._id);
+  if(idx>-1)registros[idx]={...registros[idx],maq,cod:codFinal,motDesc,dem,obs,editado:true};
+  document.getElementById('bus-edit-form').style.display='none';
+  busSeleccionado=null;
+  buscarRegs();
+}
+
+function cancelarEdicionBus(){
+  document.getElementById('bus-edit-form').style.display='none';
+  busSeleccionado=null;
+}
+
+async function borrarRegBus(idx){
+  const r=registros[idx];if(!r||!r._id)return;
+  if(!confirm(`¿Borrar este registro?\n\n${r.maq} · Cod.${r.cod} ${r.motDesc||''}\n${r.fecha} ${r.hi||''} · ${r.dem} min\n\nEsta acción no se puede deshacer.`))return;
+  try{
+    await db.collection('reportes').doc(r._id).delete();
+  }catch(e){
+    console.error('Error borrando:',e);
+    alert('No se pudo borrar. Verificá tu conexión e intentá de nuevo.');return;
+  }
+  const i=registros.findIndex(x=>x._id===r._id);
+  if(i>-1)registros.splice(i,1);
+  buscarRegs();
 }
 
 function nuevoReg(){
@@ -1241,7 +1421,8 @@ function fallasListHTML(s,totMin,dataset){
       det=`<div class="despl-det" style="display:none;background:rgba(232,82,10,0.06);border-radius:8px;margin-top:5px;padding:4px 4px">${filas}</div>`;
       chev='<i class="ti ti-chevron-right despl-chev" style="font-size:12px;color:#8e8e93;transition:transform .15s"></i>';
     }
-    return `<div class="rank-wrap" ${dataset?'onclick="toggleDespl(this)" style="cursor:pointer"':''}><div class="rank-lbl"><span style="display:flex;align-items:center;gap:6px">${chev}<span style="width:10px;height:10px;border-radius:2px;background:${COLORS[i%COLORS.length]};display:inline-block"></span>${k}</span><span style="font-weight:600">${v.min} min <span style="color:#8e8e93;font-weight:400">· ${v.cnt} ${palabraTipo(k,v.cnt)} (${p}%)</span></span></div><div class="rank-bg"><div class="rank-fill" style="width:${p}%;background:${COLORS[i%COLORS.length]}"></div></div>${det}</div>`;
+    const colFalla=colorFalla(k,COLORS[i%COLORS.length]);
+    return `<div class="rank-wrap" ${dataset?'onclick="toggleDespl(this)" style="cursor:pointer"':''}><div class="rank-lbl"><span style="display:flex;align-items:center;gap:6px">${chev}<span style="width:10px;height:10px;border-radius:2px;background:${colFalla};display:inline-block"></span>${k}</span><span style="font-weight:600">${v.min} min <span style="color:#8e8e93;font-weight:400">· ${v.cnt} ${palabraTipo(k,v.cnt)} (${p}%)</span></span></div><div class="rank-bg"><div class="rank-fill" style="width:${p}%;background:${colFalla}"></div></div>${det}</div>`;
   }).join('');
 }
 
@@ -1249,7 +1430,7 @@ function fallasListHTML(s,totMin,dataset){
 function pieFallas(canvasId,chartKey,s,totMin){
   dc(chartKey);
   if(!s.length)return;
-  charts[chartKey]=new Chart(document.getElementById(canvasId),{type:'pie',data:{labels:s.map(([k])=>k),datasets:[{data:s.map(([,v])=>v.min),backgroundColor:s.map((_,i)=>COLORS[i%COLORS.length]),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const et=s[c.dataIndex][0];const v=s[c.dataIndex][1];const p=Math.round(v.min/totMin*100);return `${c.label}: ${v.min} min · ${v.cnt} ${palabraTipo(et,v.cnt)} (${p}%)`;}}}}}});
+  charts[chartKey]=new Chart(document.getElementById(canvasId),{type:'pie',data:{labels:s.map(([k])=>k),datasets:[{data:s.map(([,v])=>v.min),backgroundColor:s.map(([k],i)=>colorFalla(k,COLORS[i%COLORS.length])),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const et=s[c.dataIndex][0];const v=s[c.dataIndex][1];const p=Math.round(v.min/totMin*100);return `${c.label}: ${v.min} min · ${v.cnt} ${palabraTipo(et,v.cnt)} (${p}%)`;}}}}}});
 }
 
 // Detalle de fallas de una máquina en el rango de fechas seleccionado
@@ -1559,9 +1740,9 @@ function renderRep(per){
       else{topEl.innerHTML='';}
       dc(chartKey);
       if(s.length){
-        charts[chartKey]=new Chart(document.getElementById(canvasId),{type:'pie',data:{labels:s.map(([k])=>k),datasets:[{data:s.map(([,v])=>v),backgroundColor:COLORS.slice(0,s.length),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const p=Math.round(c.parsed/total*100);return c.label+': '+c.parsed+' ('+p+'%)';}}}}}});
+        charts[chartKey]=new Chart(document.getElementById(canvasId),{type:'pie',data:{labels:s.map(([k])=>k),datasets:[{data:s.map(([,v])=>v),backgroundColor:s.map(([k],i)=>colorFalla(k,COLORS[i%COLORS.length])),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const p=Math.round(c.parsed/total*100);return c.label+': '+c.parsed+' ('+p+'%)';}}}}}});
       }
-      document.getElementById(rankId).innerHTML=s.length?s.map(([k,v],i)=>{const p=Math.round(v/total*100);return`<div class="rank-wrap"><div class="rank-lbl"><span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:${COLORS[i]};display:inline-block"></span>${k}</span><span style="font-weight:600">${v} <span style="color:#8e8e93;font-weight:400">(${p}%)</span></span></div><div class="rank-bg"><div class="rank-fill" style="width:${p}%;background:${COLORS[i]}"></div></div></div>`;}).join(''):'<p style="font-size:13px;color:#8e8e93">Sin datos.</p>';
+      document.getElementById(rankId).innerHTML=s.length?s.map(([k,v],i)=>{const p=Math.round(v/total*100);const cf=colorFalla(k,COLORS[i]);return`<div class="rank-wrap"><div class="rank-lbl"><span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:${cf};display:inline-block"></span>${k}</span><span style="font-weight:600">${v} <span style="color:#8e8e93;font-weight:400">(${p}%)</span></span></div><div class="rank-bg"><div class="rank-fill" style="width:${p}%;background:${cf}"></div></div></div>`;}).join(''):'<p style="font-size:13px;color:#8e8e93">Sin datos.</p>';
     };
     renderCodPie(data.filter(r=>MAQ_ESPECIFICAS.includes(r.maq)), 'cCodMaq', 'top-cod-maq', 'rank-cod-maq', 'codmaq');
     renderCodPie(data.filter(r=>r.maq==='General'), 'cCodGen', 'top-cod-gen', 'rank-cod-gen', 'codgen');
