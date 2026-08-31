@@ -497,6 +497,31 @@ textarea{resize:none;line-height:1.5}
     </div>
 
 
+    <!-- ══ COMPARACIÓN POR SEMANA ══ -->
+    <div class="card">
+      <div class="admin-sec-title" style="color:#7c3aed"><i class="ti ti-chart-bar" style="margin-right:5px;font-size:13px"></i>Comparación por semana</div>
+      <p style="font-size:12px;color:#636366;margin-bottom:10px;line-height:1.5">Horas reales perdidas semana a semana y qué falla fue la predominante en cada una.</p>
+      <label style="font-size:12px">Últimas semanas a comparar</label>
+      <select id="cmp-nsem" onchange="renderComparacion()">
+        <option value="6">Últimas 6 semanas</option>
+        <option value="8" selected>Últimas 8 semanas</option>
+        <option value="12">Últimas 12 semanas</option>
+        <option value="0">Todas</option>
+      </select>
+      <canvas id="cmp-chart" height="180" style="margin-top:10px"></canvas>
+      <div id="cmp-tabla" style="margin-top:12px"></div>
+
+      <div class="admin-sec-title" style="color:#E8520A;margin-top:22px"><i class="ti ti-tool" style="margin-right:5px;font-size:13px"></i>Cambio de filo (Cód. 9) — evolución</div>
+      <p style="font-size:12px;color:#636366;margin-bottom:10px;line-height:1.5">Comparación de minutos y cantidad de cambios de filo, por semana y por mes.</p>
+      <div class="exp-per-row" style="display:flex;gap:6px;margin-bottom:10px">
+        <button class="exp-btn active" id="cf-sem" onclick="setCfPer('sem',this)">Por semana</button>
+        <button class="exp-btn" id="cf-mes" onclick="setCfPer('mes',this)">Por mes</button>
+      </div>
+      <canvas id="cf-chart" height="180"></canvas>
+      <div id="cf-tabla" style="margin-top:12px"></div>
+    </div>
+
+
     <!-- EXPORTAR EXCEL -->
     <div class="card">
       <div class="admin-sec-title" style="color:#15803d"><i class="ti ti-file-spreadsheet" style="margin-right:5px;font-size:13px"></i>Exportar datos a Excel</div>
@@ -978,7 +1003,7 @@ function goTo(id){
   if(id==='registro')autoFechaHora(false);
   if(id==='historial')renderHist();
   if(id==='reportes'){const sf=document.getElementById('sem-fecha');if(sf&&!sf.value)sf.value=new Date().toISOString().split('T')[0];renderRep(periodo);}
-  if(id==='admin'){renderAdmin();setExpPer('hoy',document.getElementById('exp-hoy'));initBuscador();}
+  if(id==='admin'){renderAdmin();setExpPer('hoy',document.getElementById('exp-hoy'));initBuscador();renderComparacion();renderCambioFilo();}
 }
 
 function updPortada(){
@@ -1594,6 +1619,118 @@ function isoWeek(d){
   const ftDayNum=(firstThursday.getUTCDay()+6)%7;
   firstThursday.setUTCDate(firstThursday.getUTCDate()-ftDayNum+3);
   return 1+Math.round((date-firstThursday)/(7*86400000));
+}
+
+// ══ COMPARACIÓN POR SEMANA (panel admin) ══
+let cmpChart=null, cfChart=null, cfPeriodo='sem';
+
+// Clave año-semana ("2026-S31") y etiqueta corta ("S31") a partir de una fecha ISO.
+function claveSemana(fechaISO){
+  const d=new Date(fechaISO+'T00:00:00');
+  return d.getFullYear()+'-S'+String(isoWeek(d)).padStart(2,'0');
+}
+// Rango de fechas (lunes a domingo) de una semana, para mostrar.
+function rangoSemana(fechaISO){
+  const d=new Date(fechaISO+'T00:00:00');
+  const dow=(d.getDay()+6)%7; // 0=lunes
+  const lun=new Date(d);lun.setDate(d.getDate()-dow);
+  const dom=new Date(lun);dom.setDate(lun.getDate()+6);
+  const f=x=>String(x.getDate()).padStart(2,'0')+'/'+String(x.getMonth()+1).padStart(2,'0');
+  return f(lun)+' al '+f(dom);
+}
+
+function renderComparacion(){
+  const n=parseInt(document.getElementById('cmp-nsem').value,10);
+  // Agrupar registros por semana
+  const porSem={};
+  registros.forEach(r=>{
+    if(!r.fecha)return;
+    const k=claveSemana(r.fecha);
+    if(!porSem[k])porSem[k]={regs:[],ej:r.fecha};
+    porSem[k].regs.push(r);
+  });
+  let semanas=Object.keys(porSem).sort();
+  if(n>0)semanas=semanas.slice(-n);
+  if(!semanas.length){document.getElementById('cmp-tabla').innerHTML='<p style="font-size:13px;color:#8e8e93">Sin datos.</p>';return;}
+
+  const filas=semanas.map(k=>{
+    const grp=porSem[k].regs;
+    const minReal=minutosRealesPerdidos(grp);
+    const rank=aggFallas(grp); // [[etiqueta,{min,cnt}],...] ordenado por min desc
+    const pred=rank.length?rank[0]:null;
+    return {sem:k,label:'S'+k.split('-S')[1],rango:rangoSemana(porSem[k].ej),minReal,rank,pred};
+  });
+
+  // Gráfico de barras: horas reales por semana
+  const ctx=document.getElementById('cmp-chart');
+  if(cmpChart)cmpChart.destroy();
+  cmpChart=new Chart(ctx,{type:'bar',data:{labels:filas.map(f=>f.label),datasets:[{label:'Horas reales perdidas',data:filas.map(f=>+(f.minReal/60).toFixed(1)),backgroundColor:'#7c3aed'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+' hs ('+filas[c.dataIndex].minReal+' min)'}}},scales:{y:{beginAtZero:true,title:{display:true,text:'Horas'}}}}});
+
+  // Tabla comparativa con falla predominante
+  document.getElementById('cmp-tabla').innerHTML=`
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:#f2f2f7">
+        <th style="padding:6px;text-align:left;border-bottom:1px solid #e5e5ea">Semana</th>
+        <th style="padding:6px;text-align:right;border-bottom:1px solid #e5e5ea">Hs reales</th>
+        <th style="padding:6px;text-align:left;border-bottom:1px solid #e5e5ea">Falla predominante</th>
+      </tr></thead>
+      <tbody>
+      ${filas.slice().reverse().map(f=>`<tr>
+        <td style="padding:6px;border-bottom:1px solid #f2f2f7"><strong>${f.label}</strong><br><span style="color:#8e8e93;font-size:11px">${f.rango}</span></td>
+        <td style="padding:6px;text-align:right;border-bottom:1px solid #f2f2f7;font-weight:600;color:#7c3aed">${(f.minReal/60).toFixed(1)} hs</td>
+        <td style="padding:6px;border-bottom:1px solid #f2f2f7">${f.pred?`${f.pred[0]}<br><span style="color:#8e8e93;font-size:11px">${f.pred[1].min} min · ${f.pred[1].cnt} vez/veces</span>`:'—'}</td>
+      </tr>`).join('')}
+      </tbody>
+    </table>
+    <div style="margin-top:12px">
+      ${filas.slice().reverse().map(f=>`
+        <div style="margin-bottom:10px">
+          <div style="font-size:12px;font-weight:700;color:#3a3a3c;margin-bottom:4px">${f.label} — ranking de fallas</div>
+          ${f.rank.slice(0,5).map(([et,v],i)=>{const tot=f.rank.reduce((t,x)=>t+x[1].min,0);const p=tot?Math.round(v.min/tot*100):0;const col=colorFalla(et,COLORS[i%COLORS.length]);return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:${col};display:inline-block"></span>${et}</span><span style="color:#8e8e93">${v.min} min (${p}%)</span></div>`;}).join('')}
+        </div>`).join('')}
+    </div>`;
+}
+
+function setCfPer(p,btn){
+  cfPeriodo=p;
+  document.querySelectorAll('#cf-sem,#cf-mes').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCambioFilo();
+}
+
+function renderCambioFilo(){
+  // Filtrar solo código 9
+  const regs9=registros.filter(r=>String(r.cod)==='9'&&r.fecha);
+  const grupos={};
+  regs9.forEach(r=>{
+    let k,label;
+    if(cfPeriodo==='sem'){k=claveSemana(r.fecha);label='S'+k.split('-S')[1];}
+    else{const d=new Date(r.fecha+'T00:00:00');k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');label=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()]+' '+d.getFullYear();}
+    if(!grupos[k])grupos[k]={min:0,cnt:0,label};
+    grupos[k].min+=r.dem;grupos[k].cnt++;
+  });
+  const keys=Object.keys(grupos).sort();
+  const ctx=document.getElementById('cf-chart');
+  if(cfChart)cfChart.destroy();
+  if(!keys.length){document.getElementById('cf-tabla').innerHTML='<p style="font-size:13px;color:#8e8e93">Sin cambios de filo registrados.</p>';return;}
+  cfChart=new Chart(ctx,{type:'bar',data:{labels:keys.map(k=>grupos[k].label),datasets:[{label:'Minutos',data:keys.map(k=>grupos[k].min),backgroundColor:'#E8520A'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+' min · '+grupos[keys[c.dataIndex]].cnt+' cambios'}}},scales:{y:{beginAtZero:true,title:{display:true,text:'Minutos'}}}}});
+  document.getElementById('cf-tabla').innerHTML=`
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:#f2f2f7">
+        <th style="padding:6px;text-align:left;border-bottom:1px solid #e5e5ea">${cfPeriodo==='sem'?'Semana':'Mes'}</th>
+        <th style="padding:6px;text-align:right;border-bottom:1px solid #e5e5ea">Cambios</th>
+        <th style="padding:6px;text-align:right;border-bottom:1px solid #e5e5ea">Minutos</th>
+        <th style="padding:6px;text-align:right;border-bottom:1px solid #e5e5ea">Prom.</th>
+      </tr></thead>
+      <tbody>
+      ${keys.slice().reverse().map(k=>{const g=grupos[k];return `<tr>
+        <td style="padding:6px;border-bottom:1px solid #f2f2f7"><strong>${g.label}</strong></td>
+        <td style="padding:6px;text-align:right;border-bottom:1px solid #f2f2f7">${g.cnt}</td>
+        <td style="padding:6px;text-align:right;border-bottom:1px solid #f2f2f7;font-weight:600;color:#E8520A">${g.min} min</td>
+        <td style="padding:6px;text-align:right;border-bottom:1px solid #f2f2f7;color:#8e8e93">${Math.round(g.min/g.cnt)} min</td>
+      </tr>`;}).join('')}
+      </tbody>
+    </table>`;
 }
 
 // ══════════════ DETALLADO SEMANAL DE FALLAS (WORD) ══════════════
