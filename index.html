@@ -376,6 +376,15 @@ textarea{resize:none;line-height:1.5}
       <div class="card" style="margin-top:8px"><div class="card-title"><i class="ti ti-list-numbers"></i>Ranking — General</div><div id="rank-cod-gen"></div></div>
     </div>
   </div>
+
+  <!-- NOTAS DE LA SEMANA (solo admin) -->
+  <div class="card" id="notas-semana-card" style="display:none;margin-top:10px;border:1.5px solid #7c3aed">
+    <div class="card-title" style="color:#7c3aed"><i class="ti ti-notebook"></i>Notas de la reunión — <span id="ns-titulo">semana</span></div>
+    <div style="margin-bottom:10px"><span class="role-badge badge-admin" style="font-size:11px;padding:3px 10px"><i class="ti ti-shield" style="font-size:11px;margin-right:3px"></i>Solo administradores</span></div>
+    <div id="ns-lista" style="margin-bottom:10px"></div>
+    <textarea id="ns-texto" rows="3" placeholder="Escribí acá lo que se habló en la reunión de esta semana..." style="width:100%"></textarea>
+    <button onclick="guardarNotaSemana()" style="width:100%;padding:11px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-top:6px"><i class="ti ti-plus"></i> Agregar nota</button>
+  </div>
 </div>
 
 <!-- ADMIN -->
@@ -508,7 +517,7 @@ textarea{resize:none;line-height:1.5}
         <option value="12">Últimas 12 semanas</option>
         <option value="0">Todas</option>
       </select>
-      <canvas id="cmp-chart" height="180" style="margin-top:10px"></canvas>
+      <div style="position:relative;height:200px;margin-top:10px"><canvas id="cmp-chart"></canvas></div>
       <div id="cmp-tabla" style="margin-top:12px"></div>
 
       <div class="admin-sec-title" style="color:#E8520A;margin-top:22px"><i class="ti ti-tool" style="margin-right:5px;font-size:13px"></i>Cambio de filo (Cód. 9) — evolución</div>
@@ -517,7 +526,7 @@ textarea{resize:none;line-height:1.5}
         <button class="exp-btn active" id="cf-sem" onclick="setCfPer('sem',this)">Por semana</button>
         <button class="exp-btn" id="cf-mes" onclick="setCfPer('mes',this)">Por mes</button>
       </div>
-      <canvas id="cf-chart" height="180"></canvas>
+      <div style="position:relative;height:200px"><canvas id="cf-chart"></canvas></div>
       <div id="cf-tabla" style="margin-top:12px"></div>
     </div>
 
@@ -1470,6 +1479,83 @@ function getFilteredRep(){
   });
 }
 function setRepTab(t,btn){document.querySelectorAll('.rep-tab').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.rep-section').forEach(s=>s.classList.remove('active'));btn.classList.add('active');document.getElementById('rs-'+t).classList.add('active');renderRep(periodo);}
+
+// ══ NOTAS DE LA SEMANA (solo admin) ══
+let notasCache={}; // clave semana → array de notas
+
+// Clave de semana ISO ("2026-S31") a partir del campo "desde" de Reportes.
+function semanaActivaKey(){
+  const d=document.getElementById('rep-desde');
+  const f=(d&&d.value)?d.value:new Date().toISOString().split('T')[0];
+  const dt=new Date(f+'T00:00:00');
+  return dt.getFullYear()+'-S'+String(isoWeek(dt)).padStart(2,'0');
+}
+
+function refrescarNotasSemana(){
+  const card=document.getElementById('notas-semana-card');
+  if(!card)return;
+  if(!isAdmin){card.style.display='none';return;}
+  card.style.display='block';
+  const key=semanaActivaKey();
+  document.getElementById('ns-titulo').textContent=key.replace('-S',' · Semana ');
+  const lista=document.getElementById('ns-lista');
+  lista.innerHTML='<p style="font-size:12px;color:#8e8e93">Cargando notas...</p>';
+  // Leer notas de esta semana desde Firestore
+  db.collection('notas_semana').where('semana','==',key).get().then(snap=>{
+    const notas=[];
+    snap.forEach(doc=>notas.push({_id:doc.id,...doc.data()}));
+    notas.sort((a,b)=>(a.creado&&b.creado)?a.creado-b.creado:0);
+    notasCache[key]=notas;
+    pintarNotas(key);
+  }).catch(e=>{
+    console.error('Error leyendo notas:',e);
+    lista.innerHTML='<p style="font-size:12px;color:#dc2626">No se pudieron cargar las notas.</p>';
+  });
+}
+
+function pintarNotas(key){
+  const lista=document.getElementById('ns-lista');
+  const notas=notasCache[key]||[];
+  if(!notas.length){lista.innerHTML='<p style="font-size:12px;color:#8e8e93;padding:4px 0">Todavía no hay notas para esta semana.</p>';return;}
+  lista.innerHTML=notas.map(n=>`
+    <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:10px;margin-bottom:8px">
+      <div style="font-size:13px;color:#1c1c1e;white-space:pre-wrap">${(n.texto||'').replace(/</g,'&lt;')}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+        <span style="font-size:11px;color:#8e8e93">${n.fechaTxt||''}</span>
+        <button onclick="borrarNotaSemana('${n._id}')" style="background:none;border:none;color:#dc2626;font-size:11px;cursor:pointer"><i class="ti ti-trash"></i> Borrar</button>
+      </div>
+    </div>`).join('');
+}
+
+async function guardarNotaSemana(){
+  if(!isAdmin)return;
+  const ta=document.getElementById('ns-texto');
+  const texto=ta.value.trim();
+  if(!texto){alert('Escribí algo antes de guardar.');return;}
+  const key=semanaActivaKey();
+  const ahora=new Date();
+  const fechaTxt=ahora.toLocaleDateString('es-AR')+' '+ahora.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  try{
+    await db.collection('notas_semana').add({semana:key,texto,fechaTxt,creado:Date.now()});
+  }catch(e){
+    console.error('Error guardando nota:',e);
+    alert('No se pudo guardar la nota. Verificá tu conexión.');return;
+  }
+  ta.value='';
+  refrescarNotasSemana();
+}
+
+async function borrarNotaSemana(id){
+  if(!isAdmin)return;
+  if(!confirm('¿Borrar esta nota?'))return;
+  try{
+    await db.collection('notas_semana').doc(id).delete();
+  }catch(e){
+    console.error('Error borrando nota:',e);
+    alert('No se pudo borrar. Verificá tu conexión.');return;
+  }
+  refrescarNotasSemana();
+}
 function rankBars(el,entries,maxV,colorFn){el.innerHTML=entries.map(([lbl,v],i)=>`<div class="rank-wrap"><div class="rank-lbl"><span>${['🥇 ','🥈 ','🥉 '][i]||''}${lbl}</span><span style="font-weight:600">${v}</span></div><div class="rank-bg"><div class="rank-fill" style="width:${Math.round(v/maxV*100)}%;background:${colorFn(i)}"></div></div></div>`).join('');}
 
 // Agrupa registros por falla: devuelve [[etiqueta,{min,cnt}],...] ordenado por minutos desc.
@@ -1662,9 +1748,11 @@ function renderComparacion(){
   });
 
   // Gráfico de barras: horas reales por semana
-  const ctx=document.getElementById('cmp-chart');
-  if(cmpChart)cmpChart.destroy();
-  cmpChart=new Chart(ctx,{type:'bar',data:{labels:filas.map(f=>f.label),datasets:[{label:'Horas reales perdidas',data:filas.map(f=>+(f.minReal/60).toFixed(1)),backgroundColor:'#7c3aed'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+' hs ('+filas[c.dataIndex].minReal+' min)'}}},scales:{y:{beginAtZero:true,title:{display:true,text:'Horas'}}}}});
+  try{
+    const ctx=document.getElementById('cmp-chart');
+    if(cmpChart)cmpChart.destroy();
+    cmpChart=new Chart(ctx,{type:'bar',data:{labels:filas.map(f=>f.label),datasets:[{label:'Horas reales perdidas',data:filas.map(f=>+(f.minReal/60).toFixed(1)),backgroundColor:'#7c3aed'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+' hs ('+filas[c.dataIndex].minReal+' min)'}}},scales:{y:{beginAtZero:true,title:{display:true,text:'Horas'}}}}});
+  }catch(e){console.error('Error en gráfico comparación:',e);}
 
   // Tabla comparativa con falla predominante
   document.getElementById('cmp-tabla').innerHTML=`
@@ -1883,6 +1971,7 @@ function descargarDetalladoSemanal(){
 
 function renderRep(per){
   const data=getFilteredRep();
+  if(typeof refrescarNotasSemana==='function')refrescarNotasSemana();
   const tot=data.reduce((s,r)=>s+r.dem,0),avg=data.length?Math.round(tot/data.length):0,maxD=data.length?Math.max(...data.map(r=>r.dem)):0;
   document.getElementById('rep-stats').innerHTML=`
     <div class="stat-card"><div class="stat-label">Total reportes</div><div class="stat-val">${data.length}</div></div>
