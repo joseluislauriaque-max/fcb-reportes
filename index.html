@@ -19,6 +19,7 @@
 <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -135,7 +136,7 @@ textarea{resize:none;line-height:1.5}
   </div>
   <div style="display:flex;align-items:center;gap:8px">
     <span class="role-badge badge-op" id="role-badge">Operario</span>
-    <button onclick="showLogin()" style="background:none;border:none;cursor:pointer;color:#8e8e93;font-size:20px;min-width:36px;min-height:36px" aria-label="Admin"><i class="ti ti-lock" id="lock-icon"></i></button>
+    <button onclick="logout()" style="background:none;border:none;cursor:pointer;color:#8e8e93;font-size:20px;min-width:36px;min-height:36px" aria-label="Cerrar sesión" title="Cerrar sesión"><i class="ti ti-logout" id="lock-icon"></i></button>
   </div>
 </div>
 
@@ -147,28 +148,28 @@ textarea{resize:none;line-height:1.5}
   <button class="nav-btn locked" onclick="tryAdmin('admin')" id="nav-admin"><i class="ti ti-shield"></i>Admin</button>
 </div>
 
-<!-- LOGIN OBLIGATORIO AL ABRIR LA APP -->
+<!-- LOGIN OBLIGATORIO AL ABRIR LA APP (Firebase) -->
 <div class="overlay show" id="overlay-app-login" style="z-index:1000">
   <div class="login-box">
     <div style="font-size:17px;font-weight:700;margin-bottom:6px;color:#1c1c1e;display:flex;align-items:center;gap:8px"><i class="ti ti-tool" style="color:#E8520A"></i>REPORTES DIARIOS FCB</div>
-    <p style="font-size:12px;color:#8e8e93;margin-bottom:14px">Ingresá tu usuario y contraseña para usar la app hoy.</p>
-    <label>Usuario</label><input type="text" id="al-u" placeholder="N° de operario o admin" autocomplete="username"/>
+    <p style="font-size:12px;color:#8e8e93;margin-bottom:14px">Ingresá con tu correo y contraseña.</p>
+    <label>Correo</label><input type="email" id="al-u" placeholder="nombre@forestalbancaria.com.uy" autocomplete="username" autocapitalize="none" spellcheck="false"/>
     <label>Contraseña</label><input type="password" id="al-p" placeholder="••••••" autocomplete="current-password"/>
-    <div id="al-err" style="font-size:12px;color:#dc2626;margin-top:-6px;margin-bottom:8px;display:none">Usuario o contraseña incorrectos.</div>
-    <button class="btn btn-primary" onclick="doAppLogin()" style="margin-top:8px"><i class="ti ti-login"></i>Ingresar</button>
+    <div id="al-err" style="font-size:12px;color:#dc2626;margin-top:-6px;margin-bottom:8px;display:none"></div>
+    <button class="btn btn-primary" id="al-btn" onclick="doAppLogin()" style="margin-top:8px"><i class="ti ti-login"></i>Ingresar</button>
+    <p style="font-size:12px;color:#0369a1;margin-top:12px;text-align:center;cursor:pointer;text-decoration:underline" onclick="resetPass()">¿Olvidaste tu contraseña?</p>
   </div>
 </div>
 
-<!-- LOGIN -->
-<div class="overlay" id="overlay">
+<!-- CAMBIO DE CONTRASEÑA OBLIGATORIO (primer ingreso) -->
+<div class="overlay" id="overlay-cambiar-pass" style="z-index:1001">
   <div class="login-box">
-    <div style="font-size:17px;font-weight:700;margin-bottom:16px;color:#1c1c1e;display:flex;align-items:center;gap:8px"><i class="ti ti-shield" style="color:#7c3aed"></i>Acceso administrador</div>
-    <label>Usuario</label><input type="text" id="lu" placeholder="admin" autocomplete="username"/>
-    <label>Contraseña</label><input type="password" id="lp" placeholder="••••••" autocomplete="current-password"/>
-    <div id="lerr" style="font-size:12px;color:#dc2626;margin-top:-6px;margin-bottom:8px;display:none">Usuario o contraseña incorrectos.</div>
-    <button class="btn btn-primary" onclick="doLogin()" style="margin-top:8px"><i class="ti ti-login"></i>Ingresar</button>
-    <button class="btn btn-secondary" onclick="hideLogin()"><i class="ti ti-x"></i>Cancelar</button>
-    <p style="font-size:11px;color:#8e8e93;margin-top:10px;text-align:center">Credenciales configuradas por el administrador</p>
+    <div style="font-size:17px;font-weight:700;margin-bottom:6px;color:#1c1c1e;display:flex;align-items:center;gap:8px"><i class="ti ti-shield-lock" style="color:#7c3aed"></i>Creá tu contraseña</div>
+    <p style="font-size:12px;color:#8e8e93;margin-bottom:14px">Es tu primer ingreso. Por seguridad, elegí una contraseña nueva (mínimo 6 caracteres).</p>
+    <label>Nueva contraseña</label><input type="password" id="cp-1" placeholder="••••••" autocomplete="new-password"/>
+    <label>Repetir contraseña</label><input type="password" id="cp-2" placeholder="••••••" autocomplete="new-password"/>
+    <div id="cp-err" style="font-size:12px;color:#dc2626;margin-top:-6px;margin-bottom:8px;display:none"></div>
+    <button class="btn btn-primary" id="cp-btn" onclick="doCambiarPass()" style="margin-top:8px"><i class="ti ti-check"></i>Guardar y entrar</button>
   </div>
 </div>
 
@@ -198,7 +199,6 @@ textarea{resize:none;line-height:1.5}
       <p style="font-size:13px;color:#636366;margin-bottom:14px;line-height:1.7">Bienvenido al sistema de reportes de <strong>Forestal Caja Bancaria</strong>.<br>Registrá un cambio de herramienta tocando el botón de abajo.</p>
       <button class="btn btn-primary" onclick="goTo('registro')"><i class="ti ti-clipboard-plus"></i>Nuevo registro</button>
       <button class="btn btn-secondary" onclick="goTo('historial')"><i class="ti ti-list-details"></i>Ver historial</button>
-      <button class="btn btn-secondary" onclick="showLogin()" id="btn-admin-portada" style="border-color:#8e8e93;color:#636366"><i class="ti ti-shield"></i>Acceso administrador</button>
     </div>
   </div>
 </div>
@@ -603,9 +603,34 @@ textarea{resize:none;line-height:1.5}
     </div>
 
     <div class="card">
+      <div class="admin-sec-title" style="color:#0369a1"><i class="ti ti-user-plus" style="margin-right:5px;font-size:13px"></i>Gestión de usuarios</div>
+      <p style="font-size:12px;color:#636366;margin-bottom:10px;line-height:1.6">Creá cuentas nuevas. La persona entra con la contraseña provisoria y el sistema le hace elegir una propia en el primer ingreso.</p>
+      <label style="font-size:12px;color:#636366">Correo de la persona</label>
+      <input type="email" id="nu-email" placeholder="nombre@forestalbancaria.com.uy" autocapitalize="none" spellcheck="false" style="margin-bottom:8px"/>
+      <label style="font-size:12px;color:#636366">Contraseña provisoria (mínimo 6)</label>
+      <input type="text" id="nu-pass" placeholder="ej: fcb2026" style="margin-bottom:8px"/>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#1c1c1e;margin-bottom:10px;cursor:pointer">
+        <input type="checkbox" id="nu-admin" style="width:18px;height:18px;margin:0"/>
+        Darle permisos de <strong>administrador</strong> (ve y edita todo)
+      </label>
+      <button class="btn btn-primary" id="nu-btn" onclick="crearUsuarioNuevo()"><i class="ti ti-user-plus"></i>Crear usuario</button>
+      <div id="nu-msg" style="font-size:12.5px;margin-top:10px;display:none"></div>
+
+      <div class="sep" style="margin:16px 0"></div>
+      <div style="font-size:12.5px;font-weight:600;color:#7c3aed;margin-bottom:6px"><i class="ti ti-shield" style="margin-right:4px"></i>Administradores actuales</div>
+      <p style="font-size:11.5px;color:#8e8e93;margin-bottom:8px;line-height:1.6">Ven y editan todo. Podés quitarle el permiso a cualquiera (vuelve a ser solo ingreso de datos) o darle permiso a una cuenta que ya exista.</p>
+      <div id="admins-list" style="margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px">
+        <input type="email" id="ad-email" placeholder="correo ya existente" autocapitalize="none" spellcheck="false" style="margin-bottom:0;flex:1"/>
+        <button class="btn btn-secondary" id="ad-btn" onclick="agregarAdminUI()" style="margin:0;white-space:nowrap;padding:10px 14px">Hacer admin</button>
+      </div>
+      <div id="ad-msg" style="font-size:12.5px;margin-top:8px;display:none"></div>
+    </div>
+
+    <div class="card">
       <div class="admin-sec-title">Sesión</div>
-      <p style="font-size:13px;color:#636366;margin-bottom:10px">Sesión activa como <strong>admin</strong></p>
-      <button class="btn btn-danger" onclick="logout()"><i class="ti ti-logout"></i>Cerrar sesión de administrador</button>
+      <p style="font-size:13px;color:#636366;margin-bottom:10px">Sesión activa como <strong id="sesion-email">—</strong></p>
+      <button class="btn btn-danger" onclick="logout()"><i class="ti ti-logout"></i>Cerrar sesión</button>
     </div>
   </div>
 </div>
@@ -624,6 +649,30 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
+
+// ── Usuarios y roles ────────────────────────────────────────────────
+// La lista de administradores se maneja desde la app (colección "admins"
+// en la nube). Las reglas de Firestore controlan lo mismo del lado del
+// servidor, así que aunque alguien toque el código no puede saltearlo.
+// ADMIN_BOOTSTRAP = administrador de emergencia, SIEMPRE admin y no se puede
+// quitar desde la app. Debe coincidir con el correo puesto en las reglas.
+const ADMIN_BOOTSTRAP = ['jlauriaque@forestalbancaria.com.uy'];
+let adminsNube = new Set(); // se llena desde la colección "admins"
+function normEmail(e){ return (e||'').trim().toLowerCase(); }
+function esAdminEmail(email){ const e=normEmail(email); return ADMIN_BOOTSTRAP.includes(e) || adminsNube.has(e); }
+async function calcularEsAdmin(email){
+  const e=normEmail(email);
+  if(ADMIN_BOOTSTRAP.includes(e)) return true;
+  try{ const d=await db.collection('admins').doc(e).get(); return d.exists; }catch(_){ return false; }
+}
+
+// App secundaria: sirve para crear usuarios nuevos sin cerrar la sesión del admin.
+let _appSecundaria=null;
+function authSecundaria(){
+  if(!_appSecundaria){ _appSecundaria = firebase.initializeApp(firebaseConfig, 'secundaria'); }
+  return _appSecundaria.auth();
+}
 
 // ── Cloudinary (almacenamiento de fotos) ────────────────────────────
 const CLOUDINARY_CLOUD = 'drd9yupbi';
@@ -942,68 +991,228 @@ function delMot(i){MOTIVOS.splice(i,1);renderAdmin();buildMotivoSel(document.get
 function addMotGen(){const v=document.getElementById('new-mot-gen').value.trim();if(!v)return;const nc=MOTIVOS_GENERAL.length?Math.max(...MOTIVOS_GENERAL.map(m=>m.cod))+1:1;MOTIVOS_GENERAL.push({cod:nc,desc:v});document.getElementById('new-mot-gen').value='';renderAdmin();buildMotivoSel(document.getElementById('maquina').value);}
 function delMotGen(i){MOTIVOS_GENERAL.splice(i,1);renderAdmin();buildMotivoSel(document.getElementById('maquina').value);}
 
-// ── Sesión diaria (operario o administrador) ───────────────────────
+// ── Sesión con Firebase Authentication ─────────────────────────────
 function todayStr(){return new Date().toISOString().split('T')[0];}
 
-function applyAdminUI(){
-  isAdmin=true;
-  document.getElementById('role-badge').textContent='Administrador';
-  document.getElementById('role-badge').className='role-badge badge-admin';
-  document.getElementById('lock-icon').className='ti ti-lock-open';
-  ['nav-reportes','nav-admin'].forEach(id=>document.getElementById(id).classList.remove('locked'));
-  document.getElementById('btn-admin-portada').style.display='none';
-  document.getElementById('portada-stats').classList.add('show');
+let usuarioActual=null; // objeto user de Firebase
+
+// Aplica la interfaz según el rol (admin = ve todo; ingreso = solo carga)
+function applyRoleUI(admin){
+  isAdmin=!!admin;
+  const badge=document.getElementById('role-badge');
+  if(admin){
+    badge.textContent='Administrador';
+    badge.className='role-badge badge-admin';
+    ['nav-reportes','nav-admin'].forEach(id=>document.getElementById(id).classList.remove('locked'));
+    document.getElementById('portada-stats').classList.add('show');
+  }else{
+    badge.textContent='Ingreso de datos';
+    badge.className='role-badge badge-op';
+    ['nav-reportes','nav-admin'].forEach(id=>document.getElementById(id).classList.add('locked'));
+    document.getElementById('portada-stats').classList.remove('show');
+  }
   updPortada();
 }
 
-function doAppLogin(){
+// Mensajes de error de Firebase traducidos
+function errAuthTexto(code){
+  const m={
+    'auth/invalid-email':'El correo no es válido.',
+    'auth/user-disabled':'Esta cuenta está deshabilitada.',
+    'auth/user-not-found':'No existe una cuenta con ese correo.',
+    'auth/wrong-password':'Contraseña incorrecta.',
+    'auth/invalid-credential':'Correo o contraseña incorrectos.',
+    'auth/invalid-login-credentials':'Correo o contraseña incorrectos.',
+    'auth/too-many-requests':'Demasiados intentos. Esperá un momento y probá de nuevo.',
+    'auth/network-request-failed':'Sin conexión a internet.',
+    'auth/weak-password':'La contraseña es muy corta (mínimo 6 caracteres).',
+    'auth/requires-recent-login':'Por seguridad, cerrá sesión y volvé a entrar para cambiar la contraseña.'
+  };
+  return m[code]||'No se pudo completar la operación. Probá de nuevo.';
+}
+
+// Ingreso con correo y contraseña
+async function doAppLogin(){
   const u=document.getElementById('al-u').value.trim();
   const p=document.getElementById('al-p').value;
   const err=document.getElementById('al-err');
-  let role=null;
-  if(u==='admin'&&p==='1234')role='admin';
-  else if(u&&p==='1234')role='operario';
-  if(!role){err.style.display='block';return;}
+  const btn=document.getElementById('al-btn');
   err.style.display='none';
-  try{localStorage.setItem('fcb_session',JSON.stringify({date:todayStr(),role}));}catch(e){}
-  if(role==='admin')applyAdminUI();
-  document.getElementById('overlay-app-login').classList.remove('show');
-}
-
-function checkSession(){
+  if(!u||!p){err.textContent='Ingresá tu correo y contraseña.';err.style.display='block';return;}
+  btn.disabled=true;
   try{
-    const s=JSON.parse(localStorage.getItem('fcb_session')||'null');
-    if(s&&s.date===todayStr()){
-      if(s.role==='admin')applyAdminUI();
-      document.getElementById('overlay-app-login').classList.remove('show');
-    }
-  }catch(e){}
+    await auth.signInWithEmailAndPassword(u,p);
+    // onAuthStateChanged se encarga del resto
+  }catch(e){
+    err.textContent=errAuthTexto(e.code);err.style.display='block';
+  }finally{ btn.disabled=false; }
 }
 
-function showLogin(){if(isAdmin){logout();return;}document.getElementById('overlay').classList.add('show');}
-function hideLogin(){document.getElementById('overlay').classList.remove('show');document.getElementById('lerr').style.display='none';document.getElementById('lu').value='';document.getElementById('lp').value='';}
-function doLogin(){
-  const u=document.getElementById('lu').value.trim(),p=document.getElementById('lp').value;
-  if(u==='admin'&&p==='1234'){
-    applyAdminUI();hideLogin();
-    try{localStorage.setItem('fcb_session',JSON.stringify({date:todayStr(),role:'admin'}));}catch(e){}
-  } else document.getElementById('lerr').style.display='block';
+// Cambio de contraseña obligatorio (primer ingreso)
+async function doCambiarPass(){
+  const p1=document.getElementById('cp-1').value;
+  const p2=document.getElementById('cp-2').value;
+  const err=document.getElementById('cp-err');
+  const btn=document.getElementById('cp-btn');
+  err.style.display='none';
+  if(p1.length<6){err.textContent='La contraseña debe tener al menos 6 caracteres.';err.style.display='block';return;}
+  if(p1!==p2){err.textContent='Las dos contraseñas no coinciden.';err.style.display='block';return;}
+  const user=auth.currentUser;
+  if(!user){err.textContent='Se cerró la sesión. Volvé a entrar.';err.style.display='block';return;}
+  btn.disabled=true;
+  try{
+    await user.updatePassword(p1);
+    try{ await db.collection('usuarios').doc(user.uid).set({email:user.email,debeCambiar:false,cambiada:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}); }catch(e){}
+    document.getElementById('cp-1').value='';document.getElementById('cp-2').value='';
+    document.getElementById('overlay-cambiar-pass').classList.remove('show');
+    entrarApp(user); // ya con la contraseña nueva
+  }catch(e){
+    err.textContent=errAuthTexto(e.code);err.style.display='block';
+  }finally{ btn.disabled=false; }
 }
+
+// Recuperar contraseña por correo
+async function resetPass(){
+  const u=document.getElementById('al-u').value.trim();
+  const err=document.getElementById('al-err');
+  err.style.display='none';
+  if(!u){err.textContent='Escribí primero tu correo arriba y después tocá este enlace.';err.style.display='block';return;}
+  try{
+    await auth.sendPasswordResetEmail(u);
+    err.style.color='#15803d';
+    err.textContent='Te enviamos un correo para restablecer la contraseña. Revisá tu bandeja.';
+    err.style.display='block';
+    setTimeout(()=>{err.style.color='#dc2626';},6000);
+  }catch(e){
+    err.style.color='#dc2626';err.textContent=errAuthTexto(e.code);err.style.display='block';
+  }
+}
+
+// Cerrar sesión
 function logout(){
-  isAdmin=false;
-  document.getElementById('role-badge').textContent='Operario';
-  document.getElementById('role-badge').className='role-badge badge-op';
-  document.getElementById('lock-icon').className='ti ti-lock';
-  ['nav-reportes','nav-admin'].forEach(id=>document.getElementById(id).classList.add('locked'));
-  document.getElementById('btn-admin-portada').style.display='';
-  document.getElementById('portada-stats').classList.remove('show');
-  try{localStorage.setItem('fcb_session',JSON.stringify({date:todayStr(),role:'operario'}));}catch(e){}
-  goTo('portada');
+  auth.signOut().catch(()=>{});
 }
-function tryAdmin(p){isAdmin?goTo(p):showLogin();}
+
+// Cuando el usuario ya está autenticado y con contraseña definitiva
+async function entrarApp(user){
+  usuarioActual=user;
+  const admin = await calcularEsAdmin(user.email);
+  applyRoleUI(admin);
+  document.getElementById('overlay-app-login').classList.remove('show');
+  document.getElementById('al-p').value='';
+  const se=document.getElementById('sesion-email'); if(se) se.textContent=user.email||'—';
+  // Arranca la sincronización con la nube recién ahora (con sesión iniciada)
+  try{ initFirestoreSync(); initVencSync(); }catch(e){ console.error(e); }
+  if(admin) initAdminsSync();
+}
+
+// Reacciona a login / logout (se dispara al abrir la app y al cambiar sesión)
+auth.onAuthStateChanged(async (user)=>{
+  if(!user){
+    isAdmin=false;usuarioActual=null;
+    applyRoleUI(false);
+    document.getElementById('overlay-cambiar-pass').classList.remove('show');
+    document.getElementById('overlay-app-login').classList.add('show');
+    document.getElementById('al-u').value='';document.getElementById('al-p').value='';
+    goTo('portada');
+    return;
+  }
+  // ¿Primer ingreso? (sin doc de usuario o marcado debeCambiar)
+  let debeCambiar=false;
+  try{
+    const snap=await db.collection('usuarios').doc(user.uid).get();
+    debeCambiar = !snap.exists || snap.data().debeCambiar===true;
+  }catch(e){ debeCambiar=false; } // si no se puede leer, no bloquea el ingreso
+  if(debeCambiar){
+    document.getElementById('overlay-app-login').classList.remove('show');
+    document.getElementById('overlay-cambiar-pass').classList.add('show');
+  }else{
+    entrarApp(user);
+  }
+});
+
+function tryAdmin(p){ isAdmin?goTo(p):sinPermiso(); }
+function sinPermiso(){ alert('Esta sección es solo para administradores.'); }
+
+// Crear un usuario nuevo (solo administradores). No cierra la sesión actual.
+async function crearUsuarioNuevo(){
+  if(!isAdmin){ sinPermiso(); return; }
+  const email=document.getElementById('nu-email').value.trim();
+  const pass=document.getElementById('nu-pass').value;
+  const comoAdmin=document.getElementById('nu-admin').checked;
+  const msg=document.getElementById('nu-msg');
+  const btn=document.getElementById('nu-btn');
+  msg.style.display='none';
+  const mostrar=(txt,color)=>{ msg.textContent=txt; msg.style.color=color; msg.style.display='block'; };
+  if(!email||!pass){ mostrar('Completá correo y contraseña provisoria.', '#dc2626'); return; }
+  if(pass.length<6){ mostrar('La contraseña provisoria debe tener al menos 6 caracteres.', '#dc2626'); return; }
+  btn.disabled=true;
+  try{
+    const a2=authSecundaria();
+    await a2.createUserWithEmailAndPassword(email, pass);
+    await a2.signOut(); // no tocar la sesión del admin
+    if(comoAdmin){ try{ await agregarAdmin(email); }catch(e){ console.error('no se pudo marcar admin:',e); } }
+    document.getElementById('nu-email').value='';
+    document.getElementById('nu-pass').value='';
+    document.getElementById('nu-admin').checked=false;
+    mostrar('✓ Usuario creado'+(comoAdmin?' como administrador':'')+'. Pasale el correo y la contraseña provisoria "'+pass+'". La va a cambiar en su primer ingreso.', '#15803d');
+  }catch(e){
+    let t=errAuthTexto(e.code);
+    if(e.code==='auth/email-already-in-use') t='Ese correo ya tiene una cuenta.';
+    mostrar('No se pudo crear: '+t, '#dc2626');
+  }finally{ btn.disabled=false; }
+}
+
+// ── Administradores (lista dinámica en la nube) ─────────────────────
+let _adminsSyncIniciado=false;
+function initAdminsSync(){
+  if(_adminsSyncIniciado)return; _adminsSyncIniciado=true;
+  db.collection('admins').onSnapshot(s=>{
+    adminsNube = new Set(s.docs.map(d=>normEmail(d.id)));
+    renderAdminsList();
+    // Si mi propio permiso cambió mientras estoy adentro, actualizo la interfaz
+    if(usuarioActual) applyRoleUI(esAdminEmail(usuarioActual.email));
+  }, e=>console.error('admins sync:', e));
+}
+function renderAdminsList(){
+  const cont=document.getElementById('admins-list'); if(!cont)return;
+  const boot=ADMIN_BOOTSTRAP.map(normEmail);
+  const todos=Array.from(new Set([...boot, ...adminsNube])).sort();
+  if(!todos.length){ cont.innerHTML='<p style="font-size:12px;color:#8e8e93">No hay administradores en la lista.</p>'; return; }
+  cont.innerHTML=todos.map(e=>{
+    const fijo=boot.includes(e);
+    const accion=fijo
+      ? '<span style="font-size:11px;color:#8e8e93;white-space:nowrap">fijo</span>'
+      : '<button onclick="quitarAdminUI(\''+e+'\')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px" title="Quitar permiso de admin"><i class="ti ti-x"></i></button>';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0"><span style="font-size:13px;color:#1c1c1e;word-break:break-all">'+e+'</span>'+accion+'</div>';
+  }).join('');
+}
+async function agregarAdmin(email){
+  const e=normEmail(email);
+  await db.collection('admins').doc(e).set({email:e, agregado:firebase.firestore.FieldValue.serverTimestamp()});
+}
+async function agregarAdminUI(){
+  if(!isAdmin){ sinPermiso(); return; }
+  const email=document.getElementById('ad-email').value;
+  const msg=document.getElementById('ad-msg');
+  const show=(t,c)=>{ msg.textContent=t; msg.style.color=c; msg.style.display='block'; };
+  const e=normEmail(email);
+  msg.style.display='none';
+  if(!e||e.indexOf('@')<1){ show('Escribí un correo válido.', '#dc2626'); return; }
+  try{ await agregarAdmin(e); document.getElementById('ad-email').value=''; show('✓ '+e+' ahora es administrador.', '#15803d'); }
+  catch(err){ show('No se pudo: '+(err.message||err), '#dc2626'); }
+}
+async function quitarAdminUI(email){
+  if(!isAdmin){ sinPermiso(); return; }
+  const e=normEmail(email);
+  if(ADMIN_BOOTSTRAP.map(normEmail).includes(e)){ return; } // el fijo no se quita
+  if(!confirm('¿Quitar los permisos de administrador a '+e+'?\nVa a quedar como "ingreso de datos".')) return;
+  try{ await db.collection('admins').doc(e).delete(); }
+  catch(err){ alert('No se pudo quitar: '+(err.message||err)); }
+}
 
 function goTo(id){
-  if((id==='reportes'||id==='admin')&&!isAdmin){showLogin();return;}
+  if((id==='reportes'||id==='admin')&&!isAdmin){sinPermiso();return;}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
@@ -2212,7 +2421,9 @@ function normalizarReg(r){
 }
 
 // Escucha en tiempo real los reportes guardados en Firestore (compartidos entre todos los dispositivos)
+let _syncReportesIniciado=false;
 function initFirestoreSync(){
+  if(_syncReportesIniciado)return; _syncReportesIniciado=true;
   db.collection('reportes').orderBy('fecha').onSnapshot(snapshot=>{
     const remotos = snapshot.docs.map(doc=>{
       const d = doc.data();
@@ -2236,7 +2447,9 @@ let vencData = [];
 const VENC_CENTRALES = {1:'Central Eléctrica',2:'Central de Vapor',3:'Central de Incendio',4:'Central Neumática'};
 const VENC_COLORES = {1:'#b45309',2:'#c2410c',3:'#dc2626',4:'#1d4ed8'};
 
+let _syncVencIniciado=false;
 function initVencSync(){
+  if(_syncVencIniciado)return; _syncVencIniciado=true;
   db.collection('vencimientos').onSnapshot(s=>{
     vencData = s.docs.map(d=>({id:d.id, ...d.data()}));
     renderVenc(); checkAlertasVenc();
@@ -2432,17 +2645,16 @@ function seedVenc(){
     batch.set(ref,{...v, avisosEnviados:[], actualizado:new Date().toISOString()}); });
   batch.commit().then(()=>alert('✓ Se cargaron '+VENC_SEED.length+' vencimientos. Revisá las fechas marcadas como EJEMPLO.')).catch(e=>alert('Error: '+e.message));
 }
-initVencSync();
 
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 
 buildSelects();
 autoFechaHora(true);
 buildDatalist();
-checkSession();
 buildMaqPills(allMaq());
 loadLocal();
-initFirestoreSync();
+// La sincronización con la nube (initFirestoreSync / initVencSync) arranca
+// tras iniciar sesión, dentro de entrarApp().
 updPortada();
 // Init historial date range to "todo" by default so data is visible
 (function(){
