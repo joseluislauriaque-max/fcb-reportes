@@ -630,6 +630,7 @@ textarea{resize:none;line-height:1.5}
       <div class="admin-sec-title">Sesión</div>
       <p style="font-size:13px;color:#636366;margin-bottom:10px">Sesión activa como <strong id="sesion-email">—</strong></p>
       <button class="btn btn-danger" onclick="logout()"><i class="ti ti-logout"></i>Cerrar sesión</button>
+      <p style="font-size:11px;color:#8e8e93;margin-top:12px;text-align:center">Versión de la app: <strong id="app-version">—</strong></p>
     </div>
   </div>
 </div>
@@ -649,6 +650,10 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
+
+// Versión visible de la app (sirve para saber si el celular tomó la última)
+const APP_VERSION = 'v55';
+try{ document.addEventListener('DOMContentLoaded',()=>{const e=document.getElementById('app-version');if(e)e.textContent=APP_VERSION;}); }catch(e){}
 
 // ── Usuarios y roles ────────────────────────────────────────────────
 // La lista de administradores se maneja desde la app (colección "admins"
