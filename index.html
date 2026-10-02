@@ -1870,6 +1870,23 @@ function cerrarMaqDetail(){
 // H13, H24, Multilamina, etc. pueden parar sin detener el resto, por eso se informan aparte.
 const MAQUINAS_PARAN_TODO=['Gemela','Gemela y Horizontales','Multilamina','Cargadero 1','Cargadero 2','Cargadero 3','General'];
 
+// Chipera: una falla mecánica (cód. 1) o eléctrica (cód. 2) detiene toda la línea
+// SOLO si pasa de 10 min.
+// (Si se arregla rápido, la banda de descarte sigue y no frena la producción.
+//  Si pasa de 10 min es que se rompió la banda o la chipera y sí hay que parar todo.)
+// Y cuando detiene, suma únicamente los minutos que pasan de esos 10.
+const CHIPERA_UMBRAL=10;
+const CHIPERA_CODS=[1,2];
+function esChiperaParada(r){ return r && r.maq==='Chipera' && CHIPERA_CODS.includes(Number(r.cod)) && (r.dem||0)>CHIPERA_UMBRAL; }
+// ¿Este registro detiene la línea?
+function paraLinea(r){ return MAQUINAS_PARAN_TODO.includes(r.maq) || esChiperaParada(r); }
+// ¿Esta máquina (con estos registros) detiene la línea? (para clasificar en los desgloses)
+function maqParaLinea(maq, regs){
+  if(MAQUINAS_PARAN_TODO.includes(maq)) return true;
+  if(maq==='Chipera') return (regs||[]).some(esChiperaParada);
+  return false;
+}
+
 function parseHoraMin(h){
   if(!h)return null;
   const p=String(h).split(':').map(Number);
@@ -1881,10 +1898,12 @@ function parseHoraMin(h){
 // de las máquinas que detienen toda la línea. No es la suma simple.
 function minutosRealesPerdidos(data){
   const porDia={};
-  data.filter(r=>MAQUINAS_PARAN_TODO.includes(r.maq)).forEach(r=>{
+  data.filter(paraLinea).forEach(r=>{
     let a=parseHoraMin(r.hi),b=parseHoraMin(r.hf);
     if(a==null)return;
     if(b==null||b<=a)b=a+(r.dem||0);
+    // Chipera: la línea recién se detiene pasados los primeros 10 minutos
+    if(esChiperaParada(r))a=a+CHIPERA_UMBRAL;
     if(b<=a)return;
     (porDia[r.fecha]=porDia[r.fecha]||[]).push([a,b]);
   });
@@ -2051,7 +2070,8 @@ function descargarDetalladoSemanal(){
   // ── Cálculos ──
   const totalReportado=data.reduce((s,r)=>s+r.dem,0);
   const realPerdido=minutosRealesPerdidos(data);
-  const minNoParan=data.filter(r=>!MAQUINAS_PARAN_TODO.includes(r.maq)).reduce((s,r)=>s+r.dem,0);
+  const regsPorMaq={};data.forEach(r=>{(regsPorMaq[r.maq]=regsPorMaq[r.maq]||[]).push(r);});
+  const minNoParan=Object.entries(regsPorMaq).filter(([m,rs])=>!maqParaLinea(m,rs)).reduce((s,[,rs])=>s+rs.reduce((a,r)=>a+r.dem,0),0);
   const bm={};data.forEach(r=>{if(!bm[r.maq])bm[r.maq]={min:0,cnt:0};bm[r.maq].min+=r.dem;bm[r.maq].cnt++;});
   const porMaq=Object.entries(bm).sort((a,b)=>b[1].min-a[1].min);
   // Pérdida REAL de producción por máquina (solo las que detienen toda la línea)
@@ -2061,6 +2081,7 @@ function descargarDetalladoSemanal(){
     .filter(m=>!GRUPO_GEMELA.includes(m))
     .map(m=>({label:m,maqs:[m]}));
   gruposReal.unshift({label:'Gemela + Gemela y Horizontales',maqs:GRUPO_GEMELA});
+  gruposReal.push({label:'Chipera (falla +10 min)',maqs:['Chipera']});
   const realPorMaq=gruposReal
     .map(g=>{
       const dg=data.filter(r=>g.maqs.includes(r.maq));
@@ -2115,8 +2136,9 @@ function descargarDetalladoSemanal(){
     filasRes.push(fila([celda(`${nombreDia(d)} ${d.split('-').reverse().join('/')}`,{head:true,span:3})]));
     const bmD={};dd.forEach(r=>{if(!bmD[r.maq])bmD[r.maq]={min:0,cnt:0};bmD[r.maq].min+=r.dem;bmD[r.maq].cnt++;});
     Object.entries(bmD).sort((a,b)=>b[1].min-a[1].min).forEach(([m,v])=>{
-      const paraTodo=MAQUINAS_PARAN_TODO.includes(m);
-      filasRes.push(fila([celda(`${m} — ${fmtHs(v.min)} · ${v.cnt} ${v.cnt===1?'parada':'paradas'} · ${paraTodo?'DETIENE TODA LA PRODUCCIÓN':'no detiene el resto de la línea'}`,{bold:true,fill:paraTodo?'FDE4D6':'F2F2F2',span:3,color:paraTodo?'C2410C':'000000'})]));
+      const paraTodo=maqParaLinea(m, dd.filter(r=>r.maq===m));
+      const etiqParo=paraTodo?(m==='Chipera'?'DETIENE LA PRODUCCIÓN (falla +10 min)':'DETIENE TODA LA PRODUCCIÓN'):'no detiene el resto de la línea';
+      filasRes.push(fila([celda(`${m} — ${fmtHs(v.min)} · ${v.cnt} ${v.cnt===1?'parada':'paradas'} · ${etiqParo}`,{bold:true,fill:paraTodo?'FDE4D6':'F2F2F2',span:3,color:paraTodo?'C2410C':'000000'})]));
       aggFallas(dd.filter(r=>r.maq===m)).forEach(([k,f])=>{
         filasRes.push(fila([celda('    '+k),celda(f.cnt,{center:true}),celda(f.min+' min',{center:true})]));
       });
@@ -2191,7 +2213,11 @@ function renderRep(per){
     // Reporte de fallas: los que suman (detienen todo) y los que no + total real
     const realP=minutosRealesPerdidos(data);
     const bmSi={},bmNo={};
-    data.forEach(r=>{const t=MAQUINAS_PARAN_TODO.includes(r.maq)?bmSi:bmNo;if(!t[r.maq])t[r.maq]={min:0,cnt:0};t[r.maq].min+=r.dem;t[r.maq].cnt++;});
+    const regsPorMaqP={};data.forEach(r=>{(regsPorMaqP[r.maq]=regsPorMaqP[r.maq]||[]).push(r);});
+    Object.entries(regsPorMaqP).forEach(([m,rs])=>{
+      const t=maqParaLinea(m,rs)?bmSi:bmNo;
+      t[m]={min:rs.reduce((a,r)=>a+r.dem,0),cnt:rs.length};
+    });
     const filaM=([m,v])=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0 3px 8px;border-bottom:0.5px solid rgba(0,0,0,0.06)"><span>${m}</span><span style="color:#8e8e93">${v.cnt} ${v.cnt===1?'falla':'fallas'}</span><span style="font-weight:600">${v.min} min</span></div>`;
     // Igual que filaM pero con el desglose de códigos que componen esa máquina debajo.
     const filaMDet=([m,v])=>{
