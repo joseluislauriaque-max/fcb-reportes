@@ -652,7 +652,7 @@ const db = firebase.firestore();
 const auth = firebase.auth();
 
 // Versión visible de la app (sirve para saber si el celular tomó la última)
-const APP_VERSION = 'v55';
+const APP_VERSION = 'v56';
 try{ document.addEventListener('DOMContentLoaded',()=>{const e=document.getElementById('app-version');if(e)e.textContent=APP_VERSION;}); }catch(e){}
 
 // ── Usuarios y roles ────────────────────────────────────────────────
@@ -730,6 +730,7 @@ let MOTIVOS_CHIPERA=[
 
 // Códigos para Banda Larga
 let MOTIVOS_BANDA_CARGADERO=[
+  {cod:15,desc:'Banda larga trancada'},
   {cod:1,desc:'Falla mecánica'},
   {cod:2,desc:'Falla eléctrica'}
 ];
@@ -788,6 +789,7 @@ const COLORES_COD={
   12:'#db2777',  // RR-HH → rosa
   13:'#9333ea',  // Rotura Pala → púrpura
   14:'#16a34a',  // Viga trancada en cargadero → verde
+  15:'#be123c',  // Banda larga trancada → carmín
   16:'#a16207',  // Descabezado de vigas (histórico) → ocre
   18:'#64748b',  // Descanso → gris azulado
   19:'#78716c',  // Otro → gris
@@ -1883,12 +1885,18 @@ const MAQUINAS_PARAN_TODO=['Gemela','Gemela y Horizontales','Multilamina','Carga
 const CHIPERA_UMBRAL=10;
 const CHIPERA_CODS=[1,2];
 function esChiperaParada(r){ return r && r.maq==='Chipera' && CHIPERA_CODS.includes(Number(r.cod)) && (r.dem||0)>CHIPERA_UMBRAL; }
+
+// Banda Larga trancada (cód. 15): detiene toda la producción, con el tiempo completo
+// (no tiene la regla de los 10 min, esa es solo de Chipera).
+function esBandaTrancada(r){ return r && r.maq==='Banda Larga' && Number(r.cod)===15; }
+
 // ¿Este registro detiene la línea?
-function paraLinea(r){ return MAQUINAS_PARAN_TODO.includes(r.maq) || esChiperaParada(r); }
+function paraLinea(r){ return MAQUINAS_PARAN_TODO.includes(r.maq) || esChiperaParada(r) || esBandaTrancada(r); }
 // ¿Esta máquina (con estos registros) detiene la línea? (para clasificar en los desgloses)
 function maqParaLinea(maq, regs){
   if(MAQUINAS_PARAN_TODO.includes(maq)) return true;
   if(maq==='Chipera') return (regs||[]).some(esChiperaParada);
+  if(maq==='Banda Larga') return (regs||[]).some(esBandaTrancada);
   return false;
 }
 
@@ -2087,6 +2095,7 @@ function descargarDetalladoSemanal(){
     .map(m=>({label:m,maqs:[m]}));
   gruposReal.unshift({label:'Gemela + Gemela y Horizontales',maqs:GRUPO_GEMELA});
   gruposReal.push({label:'Chipera (falla +10 min)',maqs:['Chipera']});
+  gruposReal.push({label:'Banda Larga (trancada)',maqs:['Banda Larga']});
   const realPorMaq=gruposReal
     .map(g=>{
       const dg=data.filter(r=>g.maqs.includes(r.maq));
@@ -2142,7 +2151,7 @@ function descargarDetalladoSemanal(){
     const bmD={};dd.forEach(r=>{if(!bmD[r.maq])bmD[r.maq]={min:0,cnt:0};bmD[r.maq].min+=r.dem;bmD[r.maq].cnt++;});
     Object.entries(bmD).sort((a,b)=>b[1].min-a[1].min).forEach(([m,v])=>{
       const paraTodo=maqParaLinea(m, dd.filter(r=>r.maq===m));
-      const etiqParo=paraTodo?(m==='Chipera'?'DETIENE LA PRODUCCIÓN (falla +10 min)':'DETIENE TODA LA PRODUCCIÓN'):'no detiene el resto de la línea';
+      const etiqParo=paraTodo?(m==='Chipera'?'DETIENE LA PRODUCCIÓN (falla +10 min)':m==='Banda Larga'?'DETIENE LA PRODUCCIÓN (trancada)':'DETIENE TODA LA PRODUCCIÓN'):'no detiene el resto de la línea';
       filasRes.push(fila([celda(`${m} — ${fmtHs(v.min)} · ${v.cnt} ${v.cnt===1?'parada':'paradas'} · ${etiqParo}`,{bold:true,fill:paraTodo?'FDE4D6':'F2F2F2',span:3,color:paraTodo?'C2410C':'000000'})]));
       aggFallas(dd.filter(r=>r.maq===m)).forEach(([k,f])=>{
         filasRes.push(fila([celda('    '+k),celda(f.cnt,{center:true}),celda(f.min+' min',{center:true})]));
